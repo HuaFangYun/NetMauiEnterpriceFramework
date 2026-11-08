@@ -1,0 +1,112 @@
+@inject ParameterApiService ParameterApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Parameter" : "Add Parameter")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            @foreach (var field in Fields)
+            {
+                var value = _values.GetValueOrDefault(field.FieldName);
+                var label = field.FieldDesc ?? field.FieldName;
+                if (string.Equals(field.FieldType, "bit", StringComparison.OrdinalIgnoreCase))
+                {
+                    <MudItem xs="12" md="6">
+                        <MudCheckBox T="bool"
+                                     Value="@IsTrue(value)"
+                                     ValueChanged="@(v => SetBool(field.FieldName, v))"
+                                     Label="@label"
+                                     Color="Color.Primary"
+                                     Disabled="@(IsEdit && field.IsKey)" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string"
+                                      Value="@value"
+                                      ValueChanged="@(v => SetValue(field.FieldName, v))"
+                                      Label="@label"
+                                      Variant="Variant.Outlined"
+                                      Required="@field.IsMandatory"
+                                      Disabled="@(IsEdit && field.IsKey)"
+                                      Lines="@(string.Equals(field.FieldType, "text", StringComparison.OrdinalIgnoreCase) && (field.FieldName.Contains("query", StringComparison.OrdinalIgnoreCase) || field.FieldName.Contains("field_filter", StringComparison.OrdinalIgnoreCase)) ? 4 : 1)" />
+                    </MudItem>
+                }
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SaveAsync())">
+            @(_saving ? "Saving..." : "Send for Approval")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string TableName { get; set; } = string.Empty;
+
+    [Parameter]
+    public List<ParameterFieldDto> Fields { get; set; } = new();
+
+    [Parameter]
+    public Dictionary<string, string>? Row { get; set; }
+
+    private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
+    private bool _saving;
+
+    private bool IsEdit => Row != null;
+
+    protected override void OnInitialized()
+    {
+        if (Row != null)
+        {
+            foreach (var pair in Row.Where(e => !e.Key.Equals("__key", StringComparison.OrdinalIgnoreCase)))
+            {
+                _values[pair.Key] = pair.Value;
+            }
+        }
+    }
+
+    private void SetValue(string field, string? value) => _values[field] = value ?? string.Empty;
+
+    private void SetBool(string field, bool value) => _values[field] = value ? "true" : "false";
+
+    private static bool IsTrue(string? value)
+        => value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await ParameterApi.SaveAsync(new ParameterSaveRequestDto
+            {
+                TableName = TableName,
+                Key = Row?.GetValueOrDefault("__key"),
+                Values = _values,
+            });
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Request sent for approval.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

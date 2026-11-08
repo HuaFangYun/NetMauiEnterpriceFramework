@@ -1,0 +1,20 @@
+{
+  "projectName": "MitraPensiun",
+  "dbName": "mitra_pensiun_db",
+  "auditDbName": "mitra_pensiun_log_audit",
+  "server": "localhost,1433",
+  "authType": "sql",
+  "dbUser": "sa",
+  "dbPassword": "YourStrong!Passw0rd",
+  "trustServerCertificate": true,
+  "adminUser": "admin",
+  "adminPassword": "Admin#12345",
+  "adminName": "Administrator",
+  "adminEmail": "admin@example.com",
+  "branchCode": "001",
+  "logoPath": "",
+  "includeMaui": true,
+  "includeTests": false,
+  "includeDocker": false,
+  "agentDocs": true
+}

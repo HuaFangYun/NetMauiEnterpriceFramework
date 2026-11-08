@@ -1,0 +1,117 @@
+@page "/dashboard/maintenance/role-approval"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject ApprovalApiService ApprovalApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Approval</div>
+            <h1>Role Approval</h1>
+            <p>Review user-role assignment requests.</p>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search request..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="RoleApprovalListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>User</MudTh>
+            <MudTh>Group</MudTh>
+            <MudTh>Add/Edit</MudTh>
+            <MudTh>Delete</MudTh>
+            <MudTh>Read Only</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="User">@context.FullName <span class="text-muted">(@context.UserId)</span></MudTd>
+            <MudTd DataLabel="Group">@(context.GroupName ?? context.GroupId)</MudTd>
+            <MudTd DataLabel="Add/Edit">@(context.CanAddEdit ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Delete">@(context.CanDelete ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Read Only">@(context.CanReadOnly ? "Yes" : "No")</MudTd>
+            <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Color="Color.Info">@context.ApprovalType</MudChip></MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.UserId, true))">Approve</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.UserId, false))">Reject</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No pending role requests.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<RoleApprovalListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<RoleApprovalListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await ApprovalApi.GetPendingRolesAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        return new TableData<RoleApprovalListItemDto> { Items = response.Data, TotalItems = response.TotalCount };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task ProcessAsync(Guid id, string userId, bool approve)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = approve ? "Approve Role" : "Reject Role",
+            ["Message"] = $"{(approve ? "Approve" : "Reject")} role request for {userId}?",
+            ["ConfirmText"] = approve ? "Approve" : "Reject",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(approve ? "Approve Role" : "Reject Role", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = approve
+            ? await ApprovalApi.ApproveRoleAsync(id)
+            : await ApprovalApi.RejectRoleAsync(id);
+
+        Snackbar.Add(response.Message ?? "Request processed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

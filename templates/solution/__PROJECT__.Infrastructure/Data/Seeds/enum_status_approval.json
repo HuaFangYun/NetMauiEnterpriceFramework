@@ -1,0 +1,58 @@
+﻿[
+    {
+        "status_code":  0,
+        "status_name":  "Draft"
+    },
+    {
+        "status_code":  1,
+        "status_name":  "Open"
+    },
+    {
+        "status_code":  2,
+        "status_name":  "Waiting Approval"
+    },
+    {
+        "status_code":  3,
+        "status_name":  "Need Confirm"
+    },
+    {
+        "status_code":  4,
+        "status_name":  "Approved"
+    },
+    {
+        "status_code":  5,
+        "status_name":  "Rejected"
+    },
+    {
+        "status_code":  6,
+        "status_name":  "Hold"
+    },
+    {
+        "status_code":  7,
+        "status_name":  "Drop"
+    },
+    {
+        "status_code":  8,
+        "status_name":  "Deleted"
+    },
+    {
+        "status_code":  9,
+        "status_name":  "Send document to regional coordinator"
+    },
+    {
+        "status_code":  10,
+        "status_name":  "Document received by central admin"
+    },
+    {
+        "status_code":  11,
+        "status_name":  "Inspection document"
+    },
+    {
+        "status_code":  12,
+        "status_name":  "Need Approval for reject data requested"
+    },
+    {
+        "status_code":  13,
+        "status_name":  "Need Approval for approve data requested"
+    }
+]

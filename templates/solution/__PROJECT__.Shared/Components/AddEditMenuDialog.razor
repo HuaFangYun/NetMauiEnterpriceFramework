@@ -1,0 +1,148 @@
+@inject SettingApiService SettingApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.MenuUnique" Label="Menu Unique" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.MenuName" Label="Menu Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.MenuUrl" Label="Menu URL" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.ComponentType" Label="Component Type" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.ParentLevelId" Label="Parent Level" Variant="Variant.Outlined">
+                    @foreach (var level in _levels)
+                    {
+                        <MudSelectItem Value="@level.Value">@level.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.MenuUniqueParent" Label="Parent Menu" Variant="Variant.Outlined">
+                    <MudSelectItem Value="@string.Empty">— No parent —</MudSelectItem>
+                    @foreach (var parent in _parentMenus)
+                    {
+                        <MudSelectItem Value="@parent.MenuUnique">@parent.MenuName (@parent.MenuUnique)</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.MenuIcon" Label="Icon" Variant="Variant.Outlined">
+                    @foreach (var icon in _icons)
+                    {
+                        <MudSelectItem Value="@icon.Value">@icon.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int?" @bind-Value="_model.OrderSeq" Label="Order Sequence" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SubmitAsync())">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public MenuEditDto? Menu { get; set; }
+
+    private MenuEditDto _model = new();
+    private List<DropdownItemDto> _levels = new();
+    private List<DropdownItemDto> _icons = new();
+    private List<MenuTreeItemDto> _parentMenus = new();
+    private bool _saving;
+
+    private bool IsEdit => Menu != null;
+    private string Title => IsEdit ? "Edit Menu" : "Add Menu";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _levels = await SettingApi.GetMenuParentLevelsAsync();
+        _icons = await SettingApi.GetMenuIconsAsync();
+        var tree = await SettingApi.GetMenuTreeAsync();
+        _parentMenus = Flatten(tree).ToList();
+
+        if (Menu != null)
+        {
+            _model = new MenuEditDto
+            {
+                Id = Menu.Id,
+                MenuUnique = Menu.MenuUnique,
+                MenuName = Menu.MenuName,
+                MenuUrl = Menu.MenuUrl,
+                ParentLevelId = Menu.ParentLevelId,
+                MenuUniqueParent = Menu.MenuUniqueParent,
+                MenuIcon = Menu.MenuIcon,
+                OrderSeq = Menu.OrderSeq,
+                ComponentType = Menu.ComponentType,
+                IsActive = Menu.IsActive,
+            };
+
+            _parentMenus = _parentMenus.Where(x => x.Id != Menu.Id).ToList();
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.MenuUnique) || string.IsNullOrWhiteSpace(_model.MenuName))
+        {
+            Snackbar.Add("Menu unique and name are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = IsEdit
+                ? await SettingApi.UpdateMenuAsync(Menu!.Id, _model)
+                : await SettingApi.CreateMenuAsync(_model);
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Saved.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static IEnumerable<MenuTreeItemDto> Flatten(IEnumerable<MenuTreeItemDto> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            foreach (var child in Flatten(item.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+}

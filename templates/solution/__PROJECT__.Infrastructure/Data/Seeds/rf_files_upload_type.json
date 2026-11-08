@@ -1,0 +1,42 @@
+﻿[
+    {
+        "files_upload_type_code":  "FU001",
+        "files_upload_type_T24_code":  "",
+        "files_upload_type_name":  " Dokumen Pendukung KTP SLIK"
+    },
+    {
+        "files_upload_type_code":  "FU002",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  " Dokumen Pendukung Foto SK Pensiun / SK Pengangkatan Terakhir"
+    },
+    {
+        "files_upload_type_code":  "FU003",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  " Dokumen Pendukung PM 1"
+    },
+    {
+        "files_upload_type_code":  "FU004",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  "Dokumen Pendukung Capture TIF Flagging"
+    },
+    {
+        "files_upload_type_code":  "FU005",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  "Dokumen Pendukung Captyre TIF Estimasi Manfaat"
+    },
+    {
+        "files_upload_type_code":  "FU006",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  "Dokumen Pendukung NPWP"
+    },
+    {
+        "files_upload_type_code":  "FU007",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  "Dokumen Pendukung Kartu Keluarga"
+    },
+    {
+        "files_upload_type_code":  "FU999",
+        "files_upload_type_T24_code":  null,
+        "files_upload_type_name":  " Dokumen Pendukung Lain-Lain"
+    }
+]

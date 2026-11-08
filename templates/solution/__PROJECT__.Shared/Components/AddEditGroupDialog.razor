@@ -1,0 +1,85 @@
+@inject SettingApiService SettingApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.GroupId" Label="Group ID" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="_model.GroupName" Label="Group Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SubmitAsync())">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public GroupEditDto? Group { get; set; }
+
+    private GroupEditDto _model = new();
+    private bool _saving;
+
+    private bool IsEdit => Group != null;
+    private string Title => IsEdit ? "Edit Group" : "Add Group";
+
+    protected override void OnInitialized()
+    {
+        if (Group != null)
+        {
+            _model = new GroupEditDto
+            {
+                GroupId = Group.GroupId,
+                GroupName = Group.GroupName,
+                IsActive = Group.IsActive,
+            };
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.GroupId) || string.IsNullOrWhiteSpace(_model.GroupName))
+        {
+            Snackbar.Add("Group ID and name are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = IsEdit
+                ? await SettingApi.UpdateGroupAsync(Group!.GroupId, _model)
+                : await SettingApi.CreateGroupAsync(_model);
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Saved.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

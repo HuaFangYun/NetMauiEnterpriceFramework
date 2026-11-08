@@ -1,0 +1,49 @@
+namespace __PROJECT__.Application.DTOs.Auth;
+
+public class LoginRequestDto
+{
+    public string UserId { get; set; } = string.Empty;
+    public string Password { get; set; } = string.Empty;
+    public bool RememberMe { get; set; }
+}
+
+public class LoginResponseDto
+{
+    public string AccessToken { get; set; } = string.Empty;
+    public string RefreshToken { get; set; } = string.Empty;
+    public DateTime AccessTokenExpiry { get; set; }
+    public DateTime RefreshTokenExpiry { get; set; }
+    public UserResponseDto User { get; set; } = new();
+    public string UrlDestination { get; set; } = "login";
+    public bool IsPasswordExpiry { get; set; }
+    public string PasswordWarning { get; set; } = string.Empty;
+}
+
+public class RefreshTokenRequestDto
+{
+    public string RefreshToken { get; set; } = string.Empty;
+}
+
+public class LogoutRequestDto
+{
+    public string? RefreshToken { get; set; }
+}
+
+public class ChangePasswordDto
+{
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string ConfirmNewPassword { get; set; } = string.Empty;
+}
+
+public class UserResponseDto
+{
+    public string UserId { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public string? KodeCabang { get; set; }
+    public string? FullName { get; set; }
+    public string? RoleId { get; set; }
+    public string? Email { get; set; }
+    public DateTime LastLoginDate { get; set; }
+    public bool IsActive { get; set; }
+}

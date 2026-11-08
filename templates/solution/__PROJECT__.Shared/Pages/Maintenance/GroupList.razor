@@ -1,0 +1,155 @@
+@page "/dashboard/maintenance/group-list"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject SettingApiService SettingApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>Group Maintenance</h1>
+            <p>Manage user groups and role assignments.</p>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add Group</MudButton>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search group..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="GroupListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>Group ID</MudTh>
+            <MudTh>Group Name</MudTh>
+            <MudTh>Users</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Group ID">@context.GroupId</MudTd>
+            <MudTd DataLabel="Group Name">@context.GroupName</MudTd>
+            <MudTd DataLabel="Users">@context.UserCount</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No groups found.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<GroupListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<GroupListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var sortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc";
+        var response = await SettingApi.GetGroupsAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = sortDirection,
+        });
+
+        return new TableData<GroupListItemDto>
+        {
+            Items = response.Data,
+            TotalItems = response.TotalCount,
+        };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task OpenAddAsync()
+    {
+        var dialog = await DialogService.ShowAsync<AddEditGroupDialog>("Add Group");
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task OpenEditAsync(GroupListItemDto group)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Group"] = new GroupEditDto
+            {
+                GroupId = group.GroupId,
+                GroupName = group.GroupName,
+                IsActive = group.IsActive,
+            },
+        };
+
+        var dialog = await DialogService.ShowAsync<AddEditGroupDialog>("Edit Group", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(GroupListItemDto group)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Group",
+            ["Message"] = $"Delete group {group.GroupId}?",
+            ["ConfirmText"] = "Delete",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Group", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await SettingApi.DeleteGroupAsync(group.GroupId);
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

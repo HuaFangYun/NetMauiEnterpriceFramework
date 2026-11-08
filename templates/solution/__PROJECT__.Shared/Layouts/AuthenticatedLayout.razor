@@ -1,0 +1,440 @@
+@inherits LayoutComponentBase
+@implements IDisposable
+@using Microsoft.AspNetCore.SignalR.Client
+@inject NavigationManager Navigation
+@inject MenuService MenuService
+@inject TabStateService TabService
+@inject DynamicComponentResolver ComponentResolver
+@inject ITokenStorage TokenStorage
+@inject AuthService AuthService
+@inject INotifyAuthenticationState AuthStateNotifier
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
+@inject NotificationApiService NotificationApi
+@inject ApiService ApiService
+
+<MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
+
+<MudLayout Class="@(_isDarkMode ? "app-dark" : "app-light")">
+    <MudAppBar Elevation="1" Style="background:#ffffff;color:#004481;">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@(_ => ToggleDrawer())" />
+        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" />
+        <MudText Typo="Typo.h6" Class="ml-2" Style="font-weight:800;">@BrandName</MudText>
+        <MudSpacer />
+        <MudAutocomplete T="MenuItemDto"
+                         Value="_searchItem"
+                         ValueChanged="OnSearchSelected"
+                         SearchFunc="SearchMenus"
+                         ToStringFunc="@(m => m?.MenuName ?? string.Empty)"
+                         Placeholder="Search data..."
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Adornment="Adornment.Start"
+                         AdornmentIcon="@Icons.Material.Filled.Search"
+                         Style="max-width: 520px; width: 100%; background:#f5f7fb; border-radius:8px;" />
+        <MudSpacer />
+        <MudMenu>
+            <ActivatorContent Context="notificationMenu">
+                <MudBadge Color="Color.Secondary"
+                          Visible="@(_unreadCount > 0)"
+                          Content="@_unreadCount.ToString()"
+                          Overlap="true">
+                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
+                                   Color="Color.Inherit"
+                                   OnClick="@(_ => notificationMenu.ToggleAsync())" />
+                </MudBadge>
+            </ActivatorContent>
+            <ChildContent>
+                @if (_notifications.Count == 0)
+                {
+                    <MudMenuItem Disabled="true">No notifications</MudMenuItem>
+                }
+                else
+                {
+                    @foreach (var notification in _notifications.Take(8))
+                    {
+                        <MudMenuItem OnClick="@(_ => OpenNotificationAsync(notification))">
+                            <div class="notification-item">
+                                <div class="notification-title">@(notification.ShortText ?? notification.Type)</div>
+                                <div class="notification-body">@notification.LongText</div>
+                                <div class="notification-time">@notification.CreatedDate?.ToString("yyyy-MM-dd HH:mm")</div>
+                            </div>
+                        </MudMenuItem>
+                    }
+
+                    @if (_unreadCount > 0)
+                    {
+                        <MudDivider />
+                        <MudMenuItem OnClick="@(_ => MarkAllSeenAsync())">Mark all as read</MudMenuItem>
+                    }
+                }
+            </ChildContent>
+        </MudMenu>
+        <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
+                       Color="Color.Inherit"
+                       OnClick="@(_ => ToggleDarkMode())" />
+        <MudMenu>
+            <ActivatorContent Context="accountMenu">
+                <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
+                               Color="Color.Inherit"
+                               OnClick="@(_ => accountMenu.ToggleAsync())" />
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem OnClick="@(_ => OpenProfile())">Profile</MudMenuItem>
+                <MudMenuItem OnClick="@(_ => OpenChangePassword())">Change Password</MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="@(_ => LogoutAsync())">Logout</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="_drawerOpen" Width="300px" Elevation="1" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
+        <MudNavMenu Class="pa-3">
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+                </div>
+                <div>
+                    <div class="sidebar-brand-title">@BrandName</div>
+                    <div class="sidebar-brand-subtitle">Enterprise Portal</div>
+                </div>
+            </div>
+
+            <div class="maker-approval">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddModerator" FullWidth="true" OnClick="@(_ => OpenParameter("maker"))">Maker</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.GppGood" FullWidth="true" OnClick="@(_ => OpenParameter("approval"))">Approval</MudButton>
+            </div>
+
+            <MudDivider Class="my-3" />
+
+            @foreach (var item in _menuItems)
+            {
+                <RecursiveMenuItem Item="item" OnOpen="OpenMenu" />
+            }
+        </MudNavMenu>
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.False" Class="pa-6">
+            @if (TabService.Tabs.Count > 0)
+            {
+                <MudTabs @bind-ActivePanelIndex="_selectedTabIndex" Elevation="0" Rounded="true" KeepPanelsAlive="true">
+                    @foreach (var tab in TabService.Tabs)
+                    {
+                        <MudTabPanel Text="@tab.Title">
+                            <div class="tab-toolbar">
+                                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" OnClick="@(_ => RefreshTab(tab))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="@(_ => CloseTab(tab))" />
+                            </div>
+
+                            @{
+                                var componentType = GetComponentType(tab);
+                            }
+
+                            @if (componentType != null)
+                            {
+                                <DynamicComponent Type="componentType" Parameters="tab.Parameters" @key="tab.RefreshKey" />
+                            }
+                            else
+                            {
+                                <MudAlert Severity="Severity.Info" Class="mt-4">This module is not implemented yet.</MudAlert>
+                            }
+                        </MudTabPanel>
+                    }
+                </MudTabs>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">Select a menu to start.</MudAlert>
+            }
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    private const string BrandName = "__PROJECT__";
+    private const string DashboardComponent = "__PROJECT__.Shared.Pages.Dashboard, __PROJECT__.Shared";
+    private const string ProfileComponent = "__PROJECT__.Shared.Pages.Profile, __PROJECT__.Shared";
+    private const string ChangePasswordComponent = "__PROJECT__.Shared.Pages.ChangePassword, __PROJECT__.Shared";
+    private const string ParameterComponent = "__PROJECT__.Shared.Pages.Maintenance.Parameter.ParameterSystem, __PROJECT__.Shared";
+
+    private bool _drawerOpen = true;
+    private bool _isDarkMode;
+    private int _unreadCount = 0;
+    private int _selectedTabIndex;
+    private string? _userName;
+    private MenuItemDto? _searchItem;
+    private List<MenuItemDto> _menuItems = new();
+    private List<NotificationDto> _notifications = new();
+    private HubConnection? _hub;
+
+    private readonly MudTheme _theme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#004481",
+            Secondary = "#b6171e",
+            Background = "#f9f9ff",
+            Surface = "#ffffff",
+            AppbarBackground = "#ffffff",
+        },
+        PaletteDark = new PaletteDark
+        {
+            Primary = "#a5c8ff",
+            Secondary = "#ffb3ac",
+            Background = "#111c2d",
+            Surface = "#1b2638",
+            AppbarBackground = "#1b2638",
+        },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography
+            {
+                FontFamily = new[] { "Plus Jakarta Sans", "sans-serif" },
+            },
+        },
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        TabService.OnTabsChanged += OnTabsChanged;
+        _menuItems = await MenuService.GetUserMenuAsync();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        _userName = authState.User.Identity?.Name;
+
+        try
+        {
+            _notifications = await NotificationApi.GetRecentAsync();
+            _unreadCount = _notifications.Count(e => !e.IsSeen);
+        }
+        catch
+        {
+            // Notifications are non-blocking; the rest of the shell remains usable.
+        }
+
+        _ = StartHubAsync();
+
+        if (TabService.Tabs.Count == 0)
+        {
+            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard");
+        }
+
+        SyncSelectedTab();
+    }
+
+    private async Task StartHubAsync()
+    {
+        if (string.IsNullOrWhiteSpace(ApiService.ApiBaseAddress))
+        {
+            return;
+        }
+
+        _hub = new HubConnectionBuilder()
+            .WithUrl($"{ApiService.ApiBaseAddress}/userHub", options =>
+            {
+                options.AccessTokenProvider = async () => await TokenStorage.GetAccessTokenAsync();
+            })
+            .WithAutomaticReconnect()
+            .Build();
+
+        _hub.On<NotificationDto>("ReceiveNotification", notification =>
+        {
+            _ = InvokeAsync(() =>
+            {
+                _notifications.Insert(0, notification);
+                if (!notification.IsSeen)
+                {
+                    _unreadCount++;
+                }
+
+                StateHasChanged();
+            });
+        });
+
+        try
+        {
+            await _hub.StartAsync();
+        }
+        catch
+        {
+            // Real-time delivery is best-effort; REST notifications remain available.
+        }
+    }
+
+    private async Task OpenNotificationAsync(NotificationDto notification)
+    {
+        if (!notification.IsSeen)
+        {
+            await NotificationApi.MarkSeenAsync(notification.Id);
+            notification.IsSeen = true;
+            _unreadCount = Math.Max(0, _unreadCount - 1);
+        }
+
+        if (string.IsNullOrWhiteSpace(notification.Href))
+        {
+            return;
+        }
+
+        if (notification.Href.StartsWith("/api/export/download", StringComparison.OrdinalIgnoreCase)
+            && !string.IsNullOrWhiteSpace(ApiService.ApiBaseAddress))
+        {
+            var token = await TokenStorage.GetAccessTokenAsync();
+            Navigation.NavigateTo(
+                $"{ApiService.ApiBaseAddress}{notification.Href}?access_token={Uri.EscapeDataString(token ?? string.Empty)}",
+                forceLoad: true);
+            return;
+        }
+
+        Navigation.NavigateTo(notification.Href);
+    }
+
+    private async Task MarkAllSeenAsync()
+    {
+        await NotificationApi.MarkAllSeenAsync();
+        foreach (var notification in _notifications)
+        {
+            notification.IsSeen = true;
+        }
+
+        _unreadCount = 0;
+        StateHasChanged();
+    }
+
+    private void OnTabsChanged()
+    {
+        _ = InvokeAsync(() =>
+        {
+            SyncSelectedTab();
+            StateHasChanged();
+        });
+    }
+
+    private void SyncSelectedTab()
+    {
+        if (TabService.ActiveTab == null)
+        {
+            _selectedTabIndex = 0;
+            return;
+        }
+
+        var index = TabService.Tabs.IndexOf(TabService.ActiveTab);
+        _selectedTabIndex = index < 0 ? 0 : index;
+    }
+
+    private Type? GetComponentType(AppTabDto tab)
+        => ComponentResolver.ResolveComponentType(tab.ComponentType);
+
+    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+
+    private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
+
+    private void OpenMenu(MenuItemDto item)
+    {
+        if (string.IsNullOrWhiteSpace(item.ComponentType))
+        {
+            Snackbar.Add("This menu is not implemented yet.", Severity.Info);
+            return;
+        }
+
+        var parameters = new Dictionary<string, object>();
+        if (item.ComponentType.Equals("DynamicScreen", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.MenuUrl))
+        {
+            parameters["ScreenId"] = item.MenuUrl;
+        }
+        else if (item.ComponentType.Equals("DynamicReport", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(item.MenuUrl))
+        {
+            parameters["ReportId"] = item.MenuUrl;
+        }
+
+        TabService.OpenTab(item.MenuName, item.ComponentType, item.MenuUrl, parameters.Count > 0 ? parameters : null);
+    }
+
+    private void OpenProfile()
+        => TabService.OpenTab("Profile", ProfileComponent, "/profile");
+
+    private void OpenChangePassword()
+        => TabService.OpenTab("Change Password", ChangePasswordComponent, "/change-password");
+
+    private void OpenParameter(string mode)
+    {
+        var parameters = new Dictionary<string, object> { ["Mode"] = mode };
+        var title = mode == "maker" ? "Parameter Maker" : "Parameter Approval";
+        var url = mode == "maker"
+            ? "/dashboard/maintenance/parameter-system/maker"
+            : "/dashboard/maintenance/parameter-system/approval";
+
+        TabService.OpenTab(title, ParameterComponent, url, parameters);
+    }
+
+    private void RefreshTab(AppTabDto tab) => TabService.RefreshTab(tab);
+
+    private void CloseTab(AppTabDto tab)
+    {
+        var active = TabService.ActiveTab;
+        TabService.CloseTab(tab);
+
+        if (TempDataNeedsDashboard(active, tab))
+        {
+            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard");
+        }
+    }
+
+    private bool TempDataNeedsDashboard(AppTabDto? active, AppTabDto closed)
+        => active == closed && TabService.Tabs.Count == 0;
+
+    private async Task LogoutAsync()
+    {
+        var refreshToken = await TokenStorage.GetRefreshTokenAsync();
+        await AuthService.LogoutAsync(refreshToken);
+        AuthStateNotifier.NotifyUserLogout();
+        Navigation.NavigateTo("/", true);
+    }
+
+    private Task<IEnumerable<MenuItemDto>> SearchMenus(string value, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return Task.FromResult(Enumerable.Empty<MenuItemDto>());
+        }
+
+        var results = Flatten(_menuItems)
+            .Where(m => !string.IsNullOrWhiteSpace(m.ComponentType)
+                        && m.MenuName.Contains(value, StringComparison.OrdinalIgnoreCase))
+            .Take(10);
+
+        return Task.FromResult(results);
+    }
+
+    private void OnSearchSelected(MenuItemDto? item)
+    {
+        if (item == null)
+        {
+            return;
+        }
+
+        OpenMenu(item);
+        _searchItem = null;
+    }
+
+    private static IEnumerable<MenuItemDto> Flatten(IEnumerable<MenuItemDto> items)
+    {
+        foreach (var item in items)
+        {
+            yield return item;
+            foreach (var child in Flatten(item.Children))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        TabService.OnTabsChanged -= OnTabsChanged;
+        if (_hub != null)
+        {
+            _ = _hub.DisposeAsync();
+        }
+    }
+}

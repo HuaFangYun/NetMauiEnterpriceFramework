@@ -1,0 +1,266 @@
+﻿[
+    {
+        "tr_code":  "0.0",
+        "tr_name":  "Save Data Only",
+        "is_active":  true,
+        "level_seq":  0,
+        "tr_short_name":  "Save",
+        "tr_filter_name":  ""
+    },
+    {
+        "tr_code":  "1.0",
+        "tr_name":  "Initial Data Entry",
+        "is_active":  true,
+        "level_seq":  1,
+        "tr_short_name":  "Pengajuan Data Nasabah Mitra",
+        "tr_filter_name":  "Pengajuan Data Nasabah Mitra"
+    },
+    {
+        "tr_code":  "1.1",
+        "tr_name":  "Waiting Approval",
+        "is_active":  true,
+        "level_seq":  2,
+        "tr_short_name":  "Menunggu persetujuan pengajuan kalkulator",
+        "tr_filter_name":  "Menunggu Persetujuan Pengajuan"
+    },
+    {
+        "tr_code":  "10.0",
+        "tr_name":  "Done",
+        "is_active":  true,
+        "level_seq":  99,
+        "tr_short_name":  "Selesai",
+        "tr_filter_name":  "Selesai"
+    },
+    {
+        "tr_code":  "10.1",
+        "tr_name":  "Waiting Approval Dana take Over",
+        "is_active":  true,
+        "level_seq":  102,
+        "tr_short_name":  "Waiting Approval Dana take Over",
+        "tr_filter_name":  "Waiting Approval Dana take Over"
+    },
+    {
+        "tr_code":  "10.2",
+        "tr_name":  "Approval Done Dana take Over",
+        "is_active":  true,
+        "level_seq":  103,
+        "tr_short_name":  "Approval Done Dana take Over",
+        "tr_filter_name":  "Approval Done Dana take Over"
+    },
+    {
+        "tr_code":  "10.3",
+        "tr_name":  "Approval Reject Dana take Over",
+        "is_active":  true,
+        "level_seq":  104,
+        "tr_short_name":  "Approval Reject Dana take Over",
+        "tr_filter_name":  "Approval Reject Dana take Over"
+    },
+    {
+        "tr_code":  "11.0",
+        "tr_name":  "Reject",
+        "is_active":  true,
+        "level_seq":  100,
+        "tr_short_name":  "Ditolak",
+        "tr_filter_name":  "Ditolak"
+    },
+    {
+        "tr_code":  "12.0",
+        "tr_name":  "Batal",
+        "is_active":  true,
+        "level_seq":  101,
+        "tr_short_name":  "Batal",
+        "tr_filter_name":  "Batal"
+    },
+    {
+        "tr_code":  "13.0",
+        "tr_name":  "Checklist Document",
+        "is_active":  true,
+        "level_seq":  105,
+        "tr_short_name":  "Input Kelengkapan dokumen",
+        "tr_filter_name":  "Input Kelengkapan dokumen"
+    },
+    {
+        "tr_code":  "13.0.1",
+        "tr_name":  "Send document to regional coordinator",
+        "is_active":  true,
+        "level_seq":  108,
+        "tr_short_name":  "Kirim Dokumen ke Koordinator Regional",
+        "tr_filter_name":  "Kirim Dokumen ke Koordinator Regional"
+    },
+    {
+        "tr_code":  "13.0.2",
+        "tr_name":  "Document received by central admin",
+        "is_active":  true,
+        "level_seq":  109,
+        "tr_short_name":  "Dokumen Diterima oleh Admin Pusat",
+        "tr_filter_name":  "Dokumen Diterima oleh Admin Pusat"
+    },
+    {
+        "tr_code":  "13.1",
+        "tr_name":  "Inspection Document",
+        "is_active":  true,
+        "level_seq":  106,
+        "tr_short_name":  "Pemeriksaan dokumen",
+        "tr_filter_name":  "Pemeriksaan dokumen"
+    },
+    {
+        "tr_code":  "13.2",
+        "tr_name":  "Approval Document",
+        "is_active":  true,
+        "level_seq":  107,
+        "tr_short_name":  "Approval Dokumen",
+        "tr_filter_name":  "Approval Dokumen"
+    },
+    {
+        "tr_code":  "2.0",
+        "tr_name":  "Approved Calculator",
+        "is_active":  true,
+        "level_seq":  3,
+        "tr_short_name":  "Pengajuan kalkulator telah di setujui",
+        "tr_filter_name":  "Pengajuan Disetujui"
+    },
+    {
+        "tr_code":  "3.0",
+        "tr_name":  "Proses Visit - Initialize",
+        "is_active":  true,
+        "level_seq":  4,
+        "tr_short_name":  "Proses Visit",
+        "tr_filter_name":  "Proses Visit"
+    },
+    {
+        "tr_code":  "3.1",
+        "tr_name":  "Proses Visit - Reschedule",
+        "is_active":  true,
+        "level_seq":  5,
+        "tr_short_name":  "Reschedule Visit",
+        "tr_filter_name":  "Reschedule Visit"
+    },
+    {
+        "tr_code":  "3.2",
+        "tr_name":  "Proses Visit - Waiting",
+        "is_active":  true,
+        "level_seq":  6,
+        "tr_short_name":  "Menunggu jadwal LKN dari fronting",
+        "tr_filter_name":  "Menunggu jadwal LKN dari fronting"
+    },
+    {
+        "tr_code":  "3.3",
+        "tr_name":  "Proses Visit - Cancel",
+        "is_active":  true,
+        "level_seq":  7,
+        "tr_short_name":  "Cancel Visit",
+        "tr_filter_name":  "Cancel Visit"
+    },
+    {
+        "tr_code":  "3.4",
+        "tr_name":  "Proses Visit - Done",
+        "is_active":  true,
+        "level_seq":  8,
+        "tr_short_name":  "Done Visit",
+        "tr_filter_name":  "Done Visit"
+    },
+    {
+        "tr_code":  "4.0",
+        "tr_name":  "Req Video Call Amartha - Request Video Call Oleh Amartha",
+        "is_active":  true,
+        "level_seq":  9,
+        "tr_short_name":  "Request Video Call Oleh Amartha",
+        "tr_filter_name":  "Request Video Call Oleh Amartha"
+    },
+    {
+        "tr_code":  "4.1",
+        "tr_name":  "Req Video Call Amartha - Request Video Call Ulang",
+        "is_active":  true,
+        "level_seq":  10,
+        "tr_short_name":  "Request Video Call Ulang Oleh Amartha",
+        "tr_filter_name":  "Request Video Call Ulang Oleh Amartha"
+    },
+    {
+        "tr_code":  "5.0",
+        "tr_name":  "Call Center - Proses Video Call",
+        "is_active":  true,
+        "level_seq":  11,
+        "tr_short_name":  "Proses Video Call",
+        "tr_filter_name":  "Proses Video Call"
+    },
+    {
+        "tr_code":  "5.1",
+        "tr_name":  "Call Center - Request Video Call Ulang Amartha",
+        "is_active":  true,
+        "level_seq":  12,
+        "tr_short_name":  "Request Video Call Ulang Amartha",
+        "tr_filter_name":  "Request Video Call Ulang Amartha"
+    },
+    {
+        "tr_code":  "5.2",
+        "tr_name":  "Call Center - Reschedule Video Call",
+        "is_active":  true,
+        "level_seq":  13,
+        "tr_short_name":  "Reschedule Video Call",
+        "tr_filter_name":  "Reschedule Video Call"
+    },
+    {
+        "tr_code":  "5.3",
+        "tr_name":  "Call Center - Done",
+        "is_active":  true,
+        "level_seq":  14,
+        "tr_short_name":  "Call Center Done",
+        "tr_filter_name":  "Call Center Done"
+    },
+    {
+        "tr_code":  "5.4",
+        "tr_name":  "Call Center - Cancel",
+        "is_active":  true,
+        "level_seq":  15,
+        "tr_short_name":  "Cancel",
+        "tr_filter_name":  "Cancel"
+    },
+    {
+        "tr_code":  "5.5",
+        "tr_name":  "Call Center - NO TIDAK TERDAFTAR DI WA",
+        "is_active":  true,
+        "level_seq":  16,
+        "tr_short_name":  "No Tidak Terdaftar di WA",
+        "tr_filter_name":  "No Tidak Terdaftar di WA"
+    },
+    {
+        "tr_code":  "5.6",
+        "tr_name":  "Call Center - TIDAK DAPAT DIHUBUNG",
+        "is_active":  true,
+        "level_seq":  17,
+        "tr_short_name":  "Tidak dapat dihubungi",
+        "tr_filter_name":  "Tidak dapat dihubungi"
+    },
+    {
+        "tr_code":  "5.7",
+        "tr_name":  "Call Center - DOKUMEN TIDAK COMPLY",
+        "is_active":  true,
+        "level_seq":  18,
+        "tr_short_name":  "Dokumen Tidak Comply",
+        "tr_filter_name":  "Dokumen Tidak Comply"
+    },
+    {
+        "tr_code":  "8.0",
+        "tr_name":  "Notes Approval Pencairan",
+        "is_active":  true,
+        "level_seq":  96,
+        "tr_short_name":  "Notes Approval Pencairan",
+        "tr_filter_name":  "Notes Approval Pencairan"
+    },
+    {
+        "tr_code":  "9.0",
+        "tr_name":  "Hold",
+        "is_active":  true,
+        "level_seq":  97,
+        "tr_short_name":  "Ditahan",
+        "tr_filter_name":  "Ditahan"
+    },
+    {
+        "tr_code":  "9.1",
+        "tr_name":  "Hapus Data",
+        "is_active":  true,
+        "level_seq":  98,
+        "tr_short_name":  "Hapus Data",
+        "tr_filter_name":  "Hapus Data"
+    }
+]

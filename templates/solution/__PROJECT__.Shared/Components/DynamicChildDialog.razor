@@ -1,0 +1,118 @@
+@using System.Text.Json
+@inject DynamicApiService DynamicApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Record" : "Add Record")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            @foreach (var field in Fields)
+            {
+                var value = _values.GetValueOrDefault(field.Id);
+                if (field.Type is "cb" or "bit")
+                {
+                    <MudItem xs="12" md="6">
+                        <MudCheckBox T="bool"
+                                     Value="@IsTrue(value)"
+                                     ValueChanged="@(v => _values[field.Id] = v ? "1" : "0")"
+                                     Label="@field.Label"
+                                     Color="Color.Primary" />
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" md="6">
+                        <MudTextField T="string"
+                                      Value="@value"
+                                      ValueChanged="@(v => _values[field.Id] = v ?? string.Empty)"
+                                      Label="@field.Label"
+                                      Variant="Variant.Outlined" />
+                    </MudItem>
+                }
+            }
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SaveAsync())">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public string ScreenId { get; set; } = string.Empty;
+
+    [Parameter]
+    public List<DynamicFieldDto> Fields { get; set; } = new();
+
+    [Parameter]
+    public Dictionary<string, object?>? Row { get; set; }
+
+    private readonly Dictionary<string, string?> _values = new(StringComparer.OrdinalIgnoreCase);
+    private bool _saving;
+
+    private bool IsEdit => Row != null;
+
+    protected override void OnInitialized()
+    {
+        if (Row == null)
+        {
+            return;
+        }
+
+        foreach (var field in Fields)
+        {
+            var value = Row.FirstOrDefault(e => e.Key.Equals(field.Id, StringComparison.OrdinalIgnoreCase)
+                                                || Normalize(e.Key) == Normalize(field.Id)).Value;
+            _values[field.Id] = ToText(value);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        _saving = true;
+        try
+        {
+            var result = await DynamicApi.SaveChildAsync(ScreenId, new DynamicMutationRequestDto
+            {
+                Values = new Dictionary<string, string?>(_values, StringComparer.OrdinalIgnoreCase),
+            });
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Saved.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static string Normalize(string value) => value.Replace("_", string.Empty).ToLowerInvariant();
+
+    private static string ToText(object? value) => value switch
+    {
+        null => string.Empty,
+        JsonElement { ValueKind: JsonValueKind.True } => "1",
+        JsonElement { ValueKind: JsonValueKind.False } => "0",
+        JsonElement element => element.ToString(),
+        bool boolean => boolean ? "1" : "0",
+        _ => Convert.ToString(value) ?? string.Empty,
+    };
+
+    private static bool IsTrue(string? value)
+        => value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+}

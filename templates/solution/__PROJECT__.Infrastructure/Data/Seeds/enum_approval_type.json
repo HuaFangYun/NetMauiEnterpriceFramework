@@ -1,0 +1,17 @@
+﻿[
+    {
+        "approval_type_code":  "A",
+        "approval_type_name":  "Add",
+        "is_active":  true
+    },
+    {
+        "approval_type_code":  "D",
+        "approval_type_name":  "Delete",
+        "is_active":  true
+    },
+    {
+        "approval_type_code":  "M",
+        "approval_type_name":  "Modified",
+        "is_active":  true
+    }
+]

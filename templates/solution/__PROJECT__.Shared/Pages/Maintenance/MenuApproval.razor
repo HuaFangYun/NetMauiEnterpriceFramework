@@ -1,0 +1,117 @@
+@page "/dashboard/maintenance/menu-approval"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject ApprovalApiService ApprovalApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Approval</div>
+            <h1>Menu Approval</h1>
+            <p>Review menu creation, modification, and deletion requests.</p>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search request..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="MenuApprovalListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>Unique</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>URL</MudTh>
+            <MudTh>Parent</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Requester</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Unique">@context.MenuUnique</MudTd>
+            <MudTd DataLabel="Name">@context.MenuName</MudTd>
+            <MudTd DataLabel="URL">@context.MenuUrl</MudTd>
+            <MudTd DataLabel="Parent">@context.MenuUniqueParent</MudTd>
+            <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Color="Color.Info">@context.ApprovalType</MudChip></MudTd>
+            <MudTd DataLabel="Requester">@context.RequesterFullName</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.MenuUnique, true))">Approve</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.MenuUnique, false))">Reject</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No pending menu requests.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<MenuApprovalListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<MenuApprovalListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await ApprovalApi.GetPendingMenusAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        return new TableData<MenuApprovalListItemDto> { Items = response.Data, TotalItems = response.TotalCount };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task ProcessAsync(Guid id, string menuUnique, bool approve)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = approve ? "Approve Menu" : "Reject Menu",
+            ["Message"] = $"{(approve ? "Approve" : "Reject")} request for {menuUnique}?",
+            ["ConfirmText"] = approve ? "Approve" : "Reject",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(approve ? "Approve Menu" : "Reject Menu", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = approve
+            ? await ApprovalApi.ApproveMenuAsync(id)
+            : await ApprovalApi.RejectMenuAsync(id);
+
+        Snackbar.Add(response.Message ?? "Request processed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

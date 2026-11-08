@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Dynamic Link</div>
+            <h1>Linked page</h1>
+            <p>@Url</p>
+        </div>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.OpenInNew" OnClick="@(_ => OpenExternal())">Open in new browser tab</MudButton>
+    </div>
+
+    @if (string.IsNullOrWhiteSpace(Url))
+    {
+        <MudAlert Severity="Severity.Warning">No URL was provided.</MudAlert>
+    }
+    else
+    {
+        <iframe src="@Url" title="Linked page" style="width:100%;height:72vh;border:1px solid #e2e8f0;border-radius:12px;" />
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string? Url { get; set; }
+
+    private void OpenExternal()
+    {
+        if (!string.IsNullOrWhiteSpace(Url))
+        {
+            Navigation.NavigateTo(Url, forceLoad: true);
+        }
+    }
+
+    [Inject]
+    private NavigationManager Navigation { get; set; } = default!;
+}

@@ -1,0 +1,137 @@
+@inject SettingApiService SettingApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.UserId" Label="User ID" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.FullName" Label="Full Name" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.Email" Label="Email" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.PhoneNumber" Label="Phone Number" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.KodeCabang" Label="Branch Code" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.NomorIndukKaryawan" Label="Employee Number" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.GroupId" Label="Role / Group" Variant="Variant.Outlined" Required="true">
+                    @foreach (var group in _groups)
+                    {
+                        <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.GenderId" Label="Gender" Variant="Variant.Outlined">
+                    @foreach (var gender in _genders)
+                    {
+                        <MudSelectItem Value="@gender.Value">@gender.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.Password"
+                              Label="@(IsEdit ? "New Password (optional)" : "Password")"
+                              Variant="Variant.Outlined"
+                              InputType="InputType.Password"
+                              Required="@(!IsEdit)" />
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex align-center">
+                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SubmitAsync())">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public UserEditDto? User { get; set; }
+
+    private UserEditDto _model = new();
+    private List<DropdownItemDto> _groups = new();
+    private List<DropdownItemDto> _genders = new();
+    private bool _saving;
+
+    private bool IsEdit => !string.IsNullOrWhiteSpace(User?.UserId);
+    private string Title => IsEdit ? "Edit User" : "Add User";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await SettingApi.GetGroupsAsync();
+        _genders = await SettingApi.GetGendersAsync();
+
+        if (User != null)
+        {
+            _model = new UserEditDto
+            {
+                UserId = User.UserId,
+                FullName = User.FullName,
+                Email = User.Email,
+                PhoneNumber = User.PhoneNumber,
+                KodeCabang = User.KodeCabang,
+                GenderId = User.GenderId,
+                NomorIndukKaryawan = User.NomorIndukKaryawan,
+                GroupId = User.GroupId,
+                IsActive = User.IsActive,
+            };
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.UserId) || string.IsNullOrWhiteSpace(_model.GroupId))
+        {
+            Snackbar.Add("User ID and role/group are required.", Severity.Warning);
+            return;
+        }
+
+        if (!IsEdit && string.IsNullOrWhiteSpace(_model.Password))
+        {
+            Snackbar.Add("Password is required for a new user.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = IsEdit
+                ? await SettingApi.UpdateUserAsync(User!.UserId, _model)
+                : await SettingApi.CreateUserAsync(_model);
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Saved.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

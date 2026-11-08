@@ -1,0 +1,385 @@
+@page "/dashboard/maintenance/parameter-system"
+@page "/dashboard/maintenance/parameter-system/{Mode}"
+@page "/dashboard/maintenance/parameter-system/{Mode}/{TableName}"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject ParameterApiService ParameterApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject TabStateService TabService
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Parameter</div>
+            <h1>@Heading</h1>
+            <p>@Subtitle</p>
+        </div>
+        @if (IsMakerView)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(_ => OpenMakerCards())">All Cards</MudButton>
+        }
+        @if (IsCardsView)
+        {
+            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.UploadFile" OnClick="@(_ => OpenImportApprovals())">Import Approvals</MudButton>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <MudProgressLinear Indeterminate="true" />
+    }
+    else if (IsCardsView)
+    {
+        <MudGrid Spacing="3">
+            @foreach (var card in _cards)
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <MudPaper Elevation="0" Class="parameter-card">
+                        <div class="parameter-card-head">
+                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
+                            <MudChip T="string" Size="Size.Small" Color="@(card.PendingCount > 0 ? Color.Warning : Color.Default)">@card.PendingCount pending</MudChip>
+                        </div>
+                        <h3>@card.Description</h3>
+                        <code>@card.TableName</code>
+                        <div class="parameter-card-actions">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+    else if (IsMakerView)
+    {
+        <div class="table-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Placeholder="Search parameter..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadMakerAsync())">Search</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add</MudButton>
+        </div>
+
+        <MudTable T="Dictionary<string, string>"
+                  @ref="_makerTable"
+                  ServerData="LoadMakerData"
+                  Hover="true"
+                  Dense="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Elevation="0">
+            <HeaderContent>
+                @foreach (var field in _makerFields)
+                {
+                    <MudTh>@(field.FieldDesc ?? field.FieldName)</MudTh>
+                }
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                @foreach (var field in _makerFields)
+                {
+                    <MudTd DataLabel="@(field.FieldDesc ?? field.FieldName)">@context.GetValueOrDefault(field.FieldName)</MudTd>
+                }
+                <MudTd DataLabel="Actions">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No parameter rows.</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+    else if (IsApprovalView)
+    {
+        <div class="table-toolbar">
+            <MudTextField @bind-Value="_search"
+                          Placeholder="Search request..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" />
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadPendingAsync())">Search</MudButton>
+        </div>
+
+        <MudTable T="ParameterPendingListItemDto"
+                  @ref="_pendingTable"
+                  ServerData="LoadPendingData"
+                  Hover="true"
+                  Dense="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Elevation="0">
+            <HeaderContent>
+                <MudTh>Table</MudTh>
+                <MudTh>Type</MudTh>
+                <MudTh>Key</MudTh>
+                <MudTh>Summary</MudTh>
+                <MudTh>Requester</MudTh>
+                <MudTh>Actions</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Table">@context.TableName</MudTd>
+                <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Type</MudChip></MudTd>
+                <MudTd DataLabel="Key"><code>@context.KeyValue</code></MudTd>
+                <MudTd DataLabel="Summary">@context.Summary</MudTd>
+                <MudTd DataLabel="Requester">@context.RequesterFullName</MudTd>
+                <MudTd DataLabel="Actions">
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(_ => ProcessPendingAsync(context.Id, true))">Approve</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(_ => ProcessPendingAsync(context.Id, false))">Reject</MudButton>
+                </MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No pending parameter requests.</MudText>
+            </NoRecordsContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    private const string ParameterComponent = "__PROJECT__.Shared.Pages.Maintenance.Parameter.ParameterSystem, __PROJECT__.Shared";
+    private const string ScreenMenuEditorComponent = "__PROJECT__.Shared.Pages.Maintenance.ScreenMenuEditor, __PROJECT__.Shared";
+    private const string ImportApprovalComponent = "__PROJECT__.Shared.Pages.Maintenance.Parameter.ImportApproval, __PROJECT__.Shared";
+
+    [Parameter]
+    public string? Mode { get; set; }
+
+    [Parameter]
+    public string? TableName { get; set; }
+
+    private List<ParameterCardDto> _cards = new();
+    private List<ParameterFieldDto> _makerFields = new();
+    private MudTable<Dictionary<string, string>>? _makerTable;
+    private MudTable<ParameterPendingListItemDto>? _pendingTable;
+    private string? _search;
+    private bool _loading;
+
+    private bool IsCardsView => !IsMakerView && !IsApprovalView;
+    private bool IsMakerView => string.Equals(Mode, "maker", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(TableName);
+    private bool IsApprovalView => string.Equals(Mode, "approval", StringComparison.OrdinalIgnoreCase);
+
+    private string Heading => IsCardsView
+        ? "Parameter System"
+        : IsMakerView
+            ? $"Parameter Maker — {TableName}"
+            : "Parameter Approval";
+
+    private string Subtitle => IsCardsView
+        ? "Choose a parameter table to maintain."
+        : IsMakerView
+            ? "Create or update parameter requests. Changes require approval."
+            : "Review pending parameter requests.";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _loading = true;
+        _search = null;
+        _makerFields = new List<ParameterFieldDto>();
+
+        try
+        {
+            if (IsMakerView)
+            {
+                _makerFields = await ParameterApi.GetFieldsAsync(TableName!);
+            }
+            else if (IsCardsView)
+            {
+                _cards = await ParameterApi.GetCardsAsync();
+            }
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        if (IsMakerView && _makerTable != null)
+        {
+            await _makerTable.ReloadServerData();
+        }
+
+        if (IsApprovalView && _pendingTable != null)
+        {
+            await _pendingTable.ReloadServerData();
+        }
+    }
+
+    private async Task<TableData<Dictionary<string, string>>> LoadMakerData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await ParameterApi.GetListAsync(TableName!, new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        if (response.Fields.Count > 0)
+        {
+            _makerFields = response.Fields;
+        }
+
+        return new TableData<Dictionary<string, string>> { Items = response.Rows, TotalItems = response.TotalCount };
+    }
+
+    private async Task<TableData<ParameterPendingListItemDto>> LoadPendingData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await ParameterApi.GetPendingAsync(new ParameterPendingRequestDto
+        {
+            TableName = TableName,
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        return new TableData<ParameterPendingListItemDto> { Items = response.Data, TotalItems = response.TotalCount };
+    }
+
+    private void OpenMaker(ParameterCardDto card)
+    {
+        if (card.TableName == "tb_screen_menu")
+        {
+            TabService.OpenTab("Screen Menu Editor", ScreenMenuEditorComponent, "/dashboard/maintenance/screen-menu-editor");
+            return;
+        }
+
+        TabService.OpenTab(
+            $"{card.Description} Maker",
+            ParameterComponent,
+            $"/dashboard/maintenance/parameter-system/maker/{card.TableName}",
+            new Dictionary<string, object> { ["Mode"] = "maker", ["TableName"] = card.TableName });
+    }
+
+    private void OpenApproval(ParameterCardDto card)
+    {
+        TabService.OpenTab(
+            $"{card.Description} Approval",
+            ParameterComponent,
+            $"/dashboard/maintenance/parameter-system/approval/{card.TableName}",
+            new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.TableName });
+    }
+
+    private void OpenMakerCards()
+        => TabService.OpenTab(
+            "Parameter Maker",
+            ParameterComponent,
+            "/dashboard/maintenance/parameter-system/maker",
+            new Dictionary<string, object> { ["Mode"] = "maker" });
+
+    private void OpenImportApprovals()
+        => TabService.OpenTab("Import Approval", ImportApprovalComponent, "/dashboard/maintenance/import-approval");
+
+    private async Task ReloadMakerAsync()
+    {
+        if (_makerTable != null)
+        {
+            await _makerTable.ReloadServerData();
+        }
+    }
+
+    private async Task ReloadPendingAsync()
+    {
+        if (_pendingTable != null)
+        {
+            await _pendingTable.ReloadServerData();
+        }
+    }
+
+    private async Task OpenAddAsync()
+    {
+        if (_makerFields.Count == 0)
+        {
+            Snackbar.Add("Parameter metadata is empty.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["TableName"] = TableName,
+            ["Fields"] = _makerFields,
+        };
+
+        var dialog = await DialogService.ShowAsync<ParameterEditDialog>("Add Parameter", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadMakerAsync();
+        }
+    }
+
+    private async Task OpenEditAsync(Dictionary<string, string> row)
+    {
+        var parameters = new DialogParameters
+        {
+            ["TableName"] = TableName,
+            ["Fields"] = _makerFields,
+            ["Row"] = row,
+        };
+
+        var dialog = await DialogService.ShowAsync<ParameterEditDialog>("Edit Parameter", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadMakerAsync();
+        }
+    }
+
+    private async Task DeleteAsync(Dictionary<string, string> row)
+    {
+        var key = row.GetValueOrDefault("__key");
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Parameter",
+            ["Message"] = $"Delete parameter {TableName}?",
+            ["ConfirmText"] = "Delete",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Parameter", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await ParameterApi.DeleteAsync(TableName!, key);
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadMakerAsync();
+    }
+
+    private async Task ProcessPendingAsync(Guid id, bool approve)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = approve ? "Approve Parameter" : "Reject Parameter",
+            ["Message"] = approve ? "Apply this parameter request?" : "Reject this parameter request?",
+            ["ConfirmText"] = approve ? "Approve" : "Reject",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(approve ? "Approve Parameter" : "Reject Parameter", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = approve
+            ? await ParameterApi.ApproveAsync(id)
+            : await ParameterApi.RejectAsync(id);
+
+        Snackbar.Add(response.Message ?? "Processed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadPendingAsync();
+    }
+}

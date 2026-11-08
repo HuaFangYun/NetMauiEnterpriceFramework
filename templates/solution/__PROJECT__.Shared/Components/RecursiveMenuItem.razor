@@ -1,0 +1,30 @@
+@using __PROJECT__.Application.DTOs.Menu
+@using __PROJECT__.Shared.Utils
+
+@if (Item.Children.Count > 0)
+{
+    <MudNavGroup Title="@Item.MenuName"
+                 Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)"
+                 Expanded="true">
+        @foreach (var child in Item.Children.OrderBy(c => c.OrderSeq))
+        {
+            <RecursiveMenuItem Item="child" OnOpen="OnOpen" />
+        }
+    </MudNavGroup>
+}
+else
+{
+    <MudNavLink Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)"
+                Disabled="@(string.IsNullOrWhiteSpace(Item.ComponentType))"
+                OnClick="@(_ => OnOpen.InvokeAsync(Item))">
+        @Item.MenuName
+    </MudNavLink>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public MenuItemDto Item { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<MenuItemDto> OnOpen { get; set; }
+}

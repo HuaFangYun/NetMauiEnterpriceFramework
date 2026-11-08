@@ -1,0 +1,162 @@
+@page "/dashboard/maintenance/user-list"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject SettingApiService SettingApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>User Maintenance</h1>
+            <p>Manage application users and their roles.</p>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add User</MudButton>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search user..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="UserListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>User ID</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Branch</MudTh>
+            <MudTh>Role</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="User ID">@context.UserId</MudTd>
+            <MudTd DataLabel="Full Name">@context.FullName</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Branch">@context.KodeCabang</MudTd>
+            <MudTd DataLabel="Role">@context.GroupName</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsLocked)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error">Locked</MudChip>
+                }
+                else if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.LockOpen" Size="Size.Small" OnClick="@(_ => UnlockAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No users found.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<UserListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<UserListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var sortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc";
+        var response = await SettingApi.GetUsersAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = sortDirection,
+        });
+
+        return new TableData<UserListItemDto>
+        {
+            Items = response.Data,
+            TotalItems = response.TotalCount,
+        };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task OpenAddAsync()
+    {
+        var dialog = await DialogService.ShowAsync<AddEditUserDialog>("Add User");
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task OpenEditAsync(UserListItemDto user)
+    {
+        var parameters = new DialogParameters { ["User"] = user };
+        var dialog = await DialogService.ShowAsync<AddEditUserDialog>("Edit User", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(UserListItemDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete User",
+            ["Message"] = $"Delete user {user.UserId}?",
+            ["ConfirmText"] = "Delete",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete User", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await SettingApi.DeleteUserAsync(user.UserId);
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+
+    private async Task UnlockAsync(UserListItemDto user)
+    {
+        var result = await SettingApi.UnlockUserAsync(user.UserId);
+        Snackbar.Add(result.Message ?? "Unlock failed.", result.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

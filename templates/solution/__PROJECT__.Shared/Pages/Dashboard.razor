@@ -1,0 +1,29 @@
+@page "/dashboard"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="pa-0">
+    <MudPaper Elevation="0" Class="dashboard-hero">
+        <div>
+            <div class="dashboard-kicker">Enterprise Portal</div>
+            <h1>Hello, @_displayName</h1>
+            <p>Welcome back. Use the sidebar to open a module, or start building your business flow.</p>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.WavingHand" Class="dashboard-hero-icon" />
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private string _displayName = "Administrator";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var name = authState.User.Identity?.Name;
+        if (!string.IsNullOrWhiteSpace(name))
+        {
+            _displayName = name;
+        }
+    }
+}

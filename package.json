@@ -1,0 +1,49 @@
+{
+  "name": "create-enterprise-agentic-framework",
+  "version": "0.1.0",
+  "description": "Scaffolder for an enterprise .NET 10 framework with Blazor WASM, MAUI Blazor Hybrid, MudBlazor, dynamic menus, and audit DB.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rayzaisra/NetMauiEnterpriceFramework.git"
+  },
+  "homepage": "https://github.com/rayzaisra/NetMauiEnterpriceFramework#readme",
+  "bugs": {
+    "url": "https://github.com/rayzaisra/NetMauiEnterpriceFramework/issues"
+  },
+  "keywords": [
+    "dotnet",
+    "blazor",
+    "maui",
+    "mudblazor",
+    "sqlserver",
+    "scaffolder",
+    "enterprise"
+  ],
+  "bin": {
+    "create-enterprise-agentic-framework": "bin/index.js"
+  },
+  "main": "src/cli.js",
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md",
+    "INSTALL.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node bin/index.js",
+    "dry-run": "node bin/index.js --dry-run",
+    "check": "node --check bin/index.js && node --check src/cli.js && node --check src/prompts.js && node --check src/validators.js && node --check src/generator.js && node --check src/db.js && node --check src/logo.js"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0",
+    "mssql": "^11.0.1",
+    "picocolors": "^1.0.1",
+    "prompts": "^2.4.2"
+  }
+}

@@ -1,0 +1,631 @@
+@page "/dynamic/screen/{ScreenId}"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@inject DynamicApiService DynamicApi
+@inject ExportApiService ExportApi
+@inject IExcelFilePicker ExcelFilePicker
+@inject TabStateService TabService
+@inject IDialogService DialogService
+@inject ITokenStorage TokenStorage
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Dynamic Screen</div>
+            <h1>@(_screen?.Description ?? ScreenId)</h1>
+            <p>Metadata-driven screen from <code>tb_screen_menu</code>.</p>
+        </div>
+        <div class="d-flex gap-2">
+            @if (_screen?.HasButtonAdd == true && _screen.Child?.Type == "modal")
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddChildAsync())">Add</MudButton>
+            }
+            @if (_screen?.HasButtonProcess == true)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="@(_ => ProcessAsync())">Process</MudButton>
+            }
+            @if (_screen?.HasButtonImportExcel == true)
+            {
+                @if (ExcelFilePicker.IsNativePickerSupported)
+                {
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.UploadFile"
+                               Disabled="@_importing"
+                               OnClick="@(_ => PickImportAsync())">@(_importing ? "Importing..." : "Import Excel")</MudButton>
+                }
+                else
+                {
+                    <label class="import-excel-button">
+                        <InputFile OnChange="ImportExcelAsync" accept=".xlsx" />
+                        <span>@(_importing ? "Importing..." : "Import Excel")</span>
+                    </label>
+                }
+            }
+            @if (_screen?.HasButtonGenerateTxt == true)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.TextSnippet" OnClick="@(_ => ExportTxtAsync())">Export TXT</MudButton>
+            }
+            @if (_screen?.HasButtonExportExcel == true)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" OnClick="@(_ => QueueExportAsync())">Export Excel</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PictureAsPdf" OnClick="@(_ => QueuePdfExportAsync())">Export PDF</MudButton>
+            }
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(_ => LoadAsync())">Refresh</MudButton>
+        </div>
+    </div>
+
+    @if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+
+    @if (_screen != null)
+    {
+        <MudGrid Spacing="2" Class="mb-4">
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_search"
+                              Label="Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            </MudItem>
+
+            @foreach (var field in _screen.Fields.Where(f => f.Type != "h"))
+            {
+                <MudItem xs="12" md="4">
+                    @if (field.Type is "l" or "rb")
+                    {
+                        <MudSelect T="string"
+                                   Value="@GetFilter(field.Id)"
+                                   ValueChanged="@(v => SetFilter(field.Id, v))"
+                                   Label="@field.Label"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true">
+                            @foreach (var option in GetOptions(field))
+                            {
+                                <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else if (field.Type == "cb")
+                    {
+                        <MudCheckBox T="bool"
+                                     Value="@IsChecked(field.Id)"
+                                     ValueChanged="@(v => SetBool(field.Id, v))"
+                                     Label="@field.Label"
+                                     Color="Color.Primary" />
+                    }
+                    else
+                    {
+                        <MudTextField T="string"
+                                      Value="@GetFilter(field.Id)"
+                                      ValueChanged="@(v => SetFilter(field.Id, v))"
+                                      Label="@field.Label"
+                                      Placeholder="@Placeholder(field)"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                    }
+                </MudItem>
+            }
+
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var column in Columns)
+                    {
+                        <MudSelectItem Value="@column">@column</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
+                    <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Load</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(_ => ResetAsync())">Reset</MudButton>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (_screen != null)
+    {
+        <MudTable T="Dictionary<string, object>"
+                  @ref="_table"
+                  ServerData="LoadServerData"
+                  Hover="true"
+                  Dense="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Elevation="0">
+            <HeaderContent>
+                @foreach (var column in Columns)
+                {
+                    <MudTh>@column</MudTh>
+                }
+                @if (ShowActions)
+                {
+                    <MudTh>Actions</MudTh>
+                }
+            </HeaderContent>
+            <RowTemplate>
+                @foreach (var column in Columns)
+                {
+                    <MudTd DataLabel="@column">@Format(context.GetValueOrDefault(column))</MudTd>
+                }
+                @if (ShowActions)
+                {
+                    <MudTd DataLabel="Actions">
+                        @if (_screen?.Child?.Type == "url")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" OnClick="@(_ => OpenUrlAction(context))" />
+                        }
+                        @if (_screen?.HasActionRow == true && _screen.Child?.Type == "modal")
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditChildAsync(context))" />
+                        }
+                        @if (_screen?.HasButtonDelete == true)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteRowAsync(context))" />
+                        }
+                    </MudTd>
+                }
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No data.</MudText>
+            </NoRecordsContent>
+            <LoadingContent>
+                <MudProgressLinear Indeterminate="true" />
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string? ScreenId { get; set; }
+
+    private DynamicScreenDto? _screen;
+    private DynamicLoadResultDto? _result;
+    private MudTable<Dictionary<string, object>>? _table;
+    private readonly Dictionary<string, string?> _filters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<DynamicOptionDto>> _options = new(StringComparer.OrdinalIgnoreCase);
+    private string? _search;
+    private string? _sortColumn;
+    private string _sortDirection = "asc";
+    private string? _error;
+    private bool _importing;
+
+    private IEnumerable<string> Columns => _result?.Columns ?? Enumerable.Empty<string>();
+    private bool ShowActions => _screen?.HasActionRow == true
+                                || _screen?.HasButtonDelete == true
+                                || _screen?.Child?.Type == "url";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _screen = null;
+        _result = null;
+        _filters.Clear();
+        _options.Clear();
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(ScreenId))
+        {
+            _error = "Screen id is missing.";
+            return;
+        }
+
+        _screen = await DynamicApi.GetScreenAsync(ScreenId);
+        if (_screen == null)
+        {
+            _error = "Screen menu not found or not approved.";
+            return;
+        }
+
+        foreach (var field in _screen.Fields)
+        {
+            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra)
+                ? field.Extra
+                : string.Empty;
+
+            if (field.Type == "l")
+            {
+                _options[field.Id] = await DynamicApi.GetOptionsAsync(ScreenId, field.Id);
+            }
+            else if (field.Type == "rb" && !string.IsNullOrWhiteSpace(field.Extra))
+            {
+                _options[field.Id] = field.Extra
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(item => item.Split('~', 2))
+                    .Select(parts => new DynamicOptionDto
+                    {
+                        Value = parts[0].Trim(),
+                        Text = parts.Length > 1 ? parts[1].Trim() : parts[0].Trim(),
+                    })
+                    .ToList();
+            }
+        }
+
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task<TableData<Dictionary<string, object>>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(ScreenId))
+        {
+            return new TableData<Dictionary<string, object>>();
+        }
+
+        var response = await DynamicApi.LoadScreenAsync(ScreenId, new DynamicLoadRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = string.IsNullOrWhiteSpace(_sortColumn) ? state.SortLabel : _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        if (response == null)
+        {
+            _error = "Failed to load screen data.";
+            return new TableData<Dictionary<string, object>>();
+        }
+
+        _result = response;
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_sortColumn) && response.Columns.Count > 0)
+        {
+            _sortColumn = response.Columns[0];
+        }
+
+        return new TableData<Dictionary<string, object>> { Items = response.Rows, TotalItems = response.TotalCount };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task LoadAsync() => await ReloadAsync();
+
+    private async Task QueueExportAsync()
+    {
+        var result = await ExportApi.QueueScreenAsync(ScreenId!, new DynamicLoadRequestDto
+        {
+            PageNumber = 1,
+            PageSize = 200,
+            SearchTerm = _search,
+            SortColumn = _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        Snackbar.Add(
+            result == null ? "Unable to queue export." : $"Export queued: {result.FileName}",
+            result == null ? Severity.Error : Severity.Success);
+    }
+
+    private async Task QueuePdfExportAsync()
+    {
+        var result = await ExportApi.QueuePdfScreenAsync(ScreenId!, new DynamicLoadRequestDto
+        {
+            PageNumber = 1,
+            PageSize = 200,
+            SearchTerm = _search,
+            SortColumn = _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        Snackbar.Add(
+            result == null ? "Unable to queue PDF export." : $"PDF export queued: {result.FileName}",
+            result == null ? Severity.Error : Severity.Success);
+    }
+
+    private async Task OpenAddChildAsync()
+    {
+        if (_screen?.Child?.ModalFields.Count is null or 0)
+        {
+            Snackbar.Add("Child modal metadata is empty.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["ScreenId"] = ScreenId,
+            ["Fields"] = _screen.Child.ModalFields,
+        };
+        var dialog = await DialogService.ShowAsync<DynamicChildDialog>("Add Record", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private void OpenUrlAction(Dictionary<string, object> row)
+    {
+        var child = _screen?.Child;
+        if (child?.Type != "url" || string.IsNullOrWhiteSpace(child.UrlAction))
+        {
+            return;
+        }
+
+        var ids = Regex.Matches(child.UrlActionParam ?? string.Empty, @"\[([^\]]+)\]")
+            .Select(match => match.Groups[1].Value)
+            .ToList();
+        var values = ids.Select(id => GetRowValue(row, id) ?? string.Empty).ToList();
+        var url = child.UrlAction;
+        for (var index = 0; index < values.Count; index++)
+        {
+            url = url.Replace($"{{{index}}}", Uri.EscapeDataString(values[index]), StringComparison.Ordinal);
+        }
+
+        if (!IsAllowedUrl(url))
+        {
+            Snackbar.Add("URL action must be relative or HTTP(S).", Severity.Warning);
+            return;
+        }
+
+        TabService.OpenTab(
+            BuildUrlTabTitle(row),
+            "DynamicUrlView",
+            url,
+            new Dictionary<string, object> { ["Url"] = url });
+    }
+
+    private string BuildUrlTabTitle(Dictionary<string, object> row)
+    {
+        var ids = Regex.Matches(_screen?.Child?.UrlActionParam ?? string.Empty, @"\[([^\]]+)\]")
+            .Select(match => match.Groups[1].Value)
+            .ToList();
+        var value = ids.Count > 0 ? GetRowValue(row, ids[0]) : null;
+        return string.IsNullOrWhiteSpace(value)
+            ? _screen?.Description ?? "Linked page"
+            : $"{_screen?.Description ?? "Linked page"} — {value}";
+    }
+
+    private static bool IsAllowedUrl(string url)
+    {
+        if (url.StartsWith('/'))
+        {
+            return true;
+        }
+
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+               && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
+    }
+
+    private async Task OpenEditChildAsync(Dictionary<string, object> row)
+    {
+        var child = _screen?.Child;
+        if (child == null || child.ModalFields.Count == 0 || string.IsNullOrWhiteSpace(ScreenId))
+        {
+            return;
+        }
+
+        var keyField = child.ModalFields[0];
+        var key = GetRowValue(row, keyField.Id);
+        if (string.IsNullOrWhiteSpace(key))
+        {
+            Snackbar.Add("Edit key is missing.", Severity.Warning);
+            return;
+        }
+
+        var detail = await DynamicApi.GetChildDetailAsync(ScreenId, key);
+        if (detail == null)
+        {
+            Snackbar.Add("Record not found.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["ScreenId"] = ScreenId,
+            ["Fields"] = child.ModalFields,
+            ["Row"] = detail,
+        };
+        var dialog = await DialogService.ShowAsync<DynamicChildDialog>("Edit Record", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteRowAsync(Dictionary<string, object> row)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Record",
+            ["Message"] = "Delete this record?",
+            ["ConfirmText"] = "Delete",
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Record", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await DynamicApi.DeleteAsync(ScreenId!, new DynamicMutationRequestDto
+        {
+            Values = row.ToDictionary(e => e.Key, e => (string?)ToText(e.Value), StringComparer.OrdinalIgnoreCase),
+        });
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+
+    private async Task ProcessAsync()
+    {
+        var response = await DynamicApi.ProcessAsync(ScreenId!, new DynamicMutationRequestDto
+        {
+            Values = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+        Snackbar.Add(response.Message ?? "Process completed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+
+    private async Task PickImportAsync()
+    {
+        if (_importing)
+        {
+            return;
+        }
+
+        var picked = await ExcelFilePicker.PickAsync();
+        if (picked == null)
+        {
+            return;
+        }
+
+        if (picked.Content.Length == 0)
+        {
+            Snackbar.Add("Only .xlsx files up to 10 MB are supported.", Severity.Warning);
+            return;
+        }
+
+        using var stream = new MemoryStream(picked.Content);
+        await ImportExcelStreamAsync(picked.FileName, stream);
+    }
+
+    private async Task ImportExcelAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+        if (file == null)
+        {
+            return;
+        }
+
+        if (!file.Name.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+        {
+            Snackbar.Add("Only .xlsx files are supported.", Severity.Warning);
+            return;
+        }
+
+        if (file.Size > 10 * 1024 * 1024)
+        {
+            Snackbar.Add("Excel file exceeds 10 MB.", Severity.Warning);
+            return;
+        }
+
+        using var stream = file.OpenReadStream(10 * 1024 * 1024);
+        await ImportExcelStreamAsync(file.Name, stream);
+    }
+
+    private async Task ImportExcelStreamAsync(string fileName, Stream stream)
+    {
+        _importing = true;
+        try
+        {
+            var response = await DynamicApi.ImportExcelAsync(ScreenId!, stream, fileName);
+            Snackbar.Add(response.Message ?? "Import completed.", response.Success ? Severity.Success : Severity.Error);
+            if (response.Success)
+            {
+                await ReloadAsync();
+            }
+        }
+        finally
+        {
+            _importing = false;
+        }
+    }
+
+    private async Task ExportTxtAsync()
+    {
+        if (string.IsNullOrWhiteSpace(DynamicApi.ApiBaseAddress) || string.IsNullOrWhiteSpace(ScreenId))
+        {
+            return;
+        }
+
+        var token = await TokenStorage.GetAccessTokenAsync();
+        var query = new List<string>
+        {
+            $"access_token={Uri.EscapeDataString(token ?? string.Empty)}",
+            $"searchTerm={Uri.EscapeDataString(_search ?? string.Empty)}",
+            $"sortColumn={Uri.EscapeDataString(_sortColumn ?? string.Empty)}",
+            $"sortDirection={Uri.EscapeDataString(_sortDirection)}",
+        };
+        Navigation.NavigateTo(
+            $"{DynamicApi.ApiBaseAddress}/api/dynamic/screen/{Uri.EscapeDataString(ScreenId)}/export-txt?{string.Join("&", query)}",
+            forceLoad: true);
+    }
+
+    private static string? GetRowValue(Dictionary<string, object> row, string field)
+        => row.FirstOrDefault(e => Normalize(e.Key) == Normalize(field)).Value is { } value
+            ? ToText(value)
+            : null;
+
+    private static string Normalize(string value) => value.Replace("_", string.Empty).ToLowerInvariant();
+
+    private static string ToText(object? value) => value switch
+    {
+        null => string.Empty,
+        JsonElement element => element.ValueKind == JsonValueKind.String ? element.GetString() ?? string.Empty : element.ToString(),
+        bool boolean => boolean ? "1" : "0",
+        _ => Convert.ToString(value) ?? string.Empty,
+    };
+    private async Task ResetAsync()
+    {
+        foreach (var field in _screen?.Fields ?? new List<DynamicFieldDto>())
+        {
+            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra) ? field.Extra : string.Empty;
+        }
+
+        _search = null;
+        await ReloadAsync();
+    }
+
+    private string? GetFilter(string id) => _filters.GetValueOrDefault(id);
+
+    private void SetFilter(string id, string? value) => _filters[id] = value ?? string.Empty;
+
+    private void SetBool(string id, bool value) => _filters[id] = value ? "1" : "0";
+
+    private bool IsChecked(string id)
+    {
+        var value = _filters.GetValueOrDefault(id);
+        return value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<DynamicOptionDto> GetOptions(DynamicFieldDto field)
+        => _options.GetValueOrDefault(field.Id) ?? Enumerable.Empty<DynamicOptionDto>();
+
+    private static string? Placeholder(DynamicFieldDto field) => field.Type switch
+    {
+        "d" => "yyyy-MM-dd",
+        "dm" => "yyyy-MM",
+        "n" or "f" => "0",
+        _ => null,
+    };
+
+    private static string Format(object? value) => value switch
+    {
+        null => string.Empty,
+        bool boolean => boolean ? "Yes" : "No",
+        JsonElement element => element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Null => string.Empty,
+            _ => element.ToString(),
+        },
+        _ => Convert.ToString(value) ?? string.Empty,
+    };
+}

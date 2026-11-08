@@ -1,0 +1,318 @@
+@page "/dynamic/report/{ReportId}"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@using System.Text.Json
+@inject DynamicApiService DynamicApi
+@inject ExportApiService ExportApi
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Dynamic Report</div>
+            <h1>@(_report?.Name ?? ReportId)</h1>
+            <p>Metadata-driven report from <code>tb_report_set</code>.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" OnClick="@(_ => QueueExportAsync())">Export Excel</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PictureAsPdf" OnClick="@(_ => QueuePdfExportAsync())">Export PDF</MudButton>
+            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(_ => ReloadAsync())">Refresh</MudButton>
+        </div>
+    </div>
+
+    @if (_error != null)
+    {
+        <MudAlert Severity="Severity.Error">@_error</MudAlert>
+    }
+
+    @if (_report != null)
+    {
+        <MudGrid Spacing="2" Class="mb-4">
+            <MudItem xs="12" md="4">
+                <MudTextField @bind-Value="_search"
+                              Label="Search"
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            </MudItem>
+
+            @foreach (var field in _report.Fields.Where(f => f.Type != "h"))
+            {
+                <MudItem xs="12" md="4">
+                    @if (field.Type is "l" or "rb")
+                    {
+                        <MudSelect T="string"
+                                   Value="@GetFilter(field.Id)"
+                                   ValueChanged="@(v => SetFilter(field.Id, v))"
+                                   Label="@field.Label"
+                                   Variant="Variant.Outlined"
+                                   Margin="Margin.Dense"
+                                   Clearable="true">
+                            @foreach (var option in GetOptions(field))
+                            {
+                                <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>
+                            }
+                        </MudSelect>
+                    }
+                    else if (field.Type == "cb")
+                    {
+                        <MudCheckBox T="bool"
+                                     Value="@IsChecked(field.Id)"
+                                     ValueChanged="@(v => SetBool(field.Id, v))"
+                                     Label="@field.Label"
+                                     Color="Color.Primary" />
+                    }
+                    else
+                    {
+                        <MudTextField T="string"
+                                      Value="@GetFilter(field.Id)"
+                                      ValueChanged="@(v => SetFilter(field.Id, v))"
+                                      Label="@field.Label"
+                                      Placeholder="@Placeholder(field)"
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense" />
+                    }
+                </MudItem>
+            }
+
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    @foreach (var column in Columns)
+                    {
+                        <MudSelectItem Value="@column">@column</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4">
+                <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
+                    <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Load</MudButton>
+                <MudButton Variant="Variant.Text" OnClick="@(_ => ResetAsync())">Reset</MudButton>
+            </MudItem>
+        </MudGrid>
+    }
+
+    @if (_report != null)
+    {
+        <MudTable T="Dictionary<string, object>"
+                  @ref="_table"
+                  ServerData="LoadServerData"
+                  Hover="true"
+                  Dense="true"
+                  Breakpoint="Breakpoint.Sm"
+                  Elevation="0">
+            <HeaderContent>
+                @foreach (var column in Columns)
+                {
+                    <MudTh>@column</MudTh>
+                }
+            </HeaderContent>
+            <RowTemplate>
+                @foreach (var column in Columns)
+                {
+                    <MudTd DataLabel="@column">@Format(context.GetValueOrDefault(column))</MudTd>
+                }
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText>No data.</MudText>
+            </NoRecordsContent>
+            <LoadingContent>
+                <MudProgressLinear Indeterminate="true" />
+            </LoadingContent>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+            </PagerContent>
+        </MudTable>
+    }
+</MudPaper>
+
+@code {
+    [Parameter]
+    public string? ReportId { get; set; }
+
+    private DynamicReportDto? _report;
+    private DynamicLoadResultDto? _result;
+    private MudTable<Dictionary<string, object>>? _table;
+    private readonly Dictionary<string, string?> _filters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<DynamicOptionDto>> _options = new(StringComparer.OrdinalIgnoreCase);
+    private string? _search;
+    private string? _sortColumn;
+    private string _sortDirection = "asc";
+    private string? _error;
+
+    private IEnumerable<string> Columns => _result?.Columns ?? Enumerable.Empty<string>();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _report = null;
+        _result = null;
+        _filters.Clear();
+        _options.Clear();
+        _error = null;
+
+        if (string.IsNullOrWhiteSpace(ReportId))
+        {
+            _error = "Report id is missing.";
+            return;
+        }
+
+        _report = await DynamicApi.GetReportAsync(ReportId);
+        if (_report == null)
+        {
+            _error = "Report not found, not approved, or access denied.";
+            return;
+        }
+
+        foreach (var field in _report.Fields)
+        {
+            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra)
+                ? field.Extra
+                : string.Empty;
+
+            if (field.Type == "rb" && !string.IsNullOrWhiteSpace(field.Extra))
+            {
+                _options[field.Id] = field.Extra
+                    .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(item => item.Split('~', 2))
+                    .Select(parts => new DynamicOptionDto
+                    {
+                        Value = parts[0].Trim(),
+                        Text = parts.Length > 1 ? parts[1].Trim() : parts[0].Trim(),
+                    })
+                    .ToList();
+            }
+        }
+
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task<TableData<Dictionary<string, object>>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(ReportId))
+        {
+            return new TableData<Dictionary<string, object>>();
+        }
+
+        var response = await DynamicApi.LoadReportAsync(ReportId, new DynamicLoadRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = string.IsNullOrWhiteSpace(_sortColumn) ? state.SortLabel : _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        if (response == null)
+        {
+            _error = "Failed to load report data.";
+            return new TableData<Dictionary<string, object>>();
+        }
+
+        _result = response;
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_sortColumn) && response.Columns.Count > 0)
+        {
+            _sortColumn = response.Columns[0];
+        }
+
+        return new TableData<Dictionary<string, object>> { Items = response.Rows, TotalItems = response.TotalCount };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task ResetAsync()
+    {
+        foreach (var field in _report?.Fields ?? new List<DynamicFieldDto>())
+        {
+            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra) ? field.Extra : string.Empty;
+        }
+
+        _search = null;
+        await ReloadAsync();
+    }
+
+    private async Task QueueExportAsync()
+    {
+        var result = await ExportApi.QueueReportAsync(ReportId!, new DynamicLoadRequestDto
+        {
+            PageNumber = 1,
+            PageSize = 200,
+            SearchTerm = _search,
+            SortColumn = _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        Snackbar.Add(
+            result == null ? "Unable to queue export." : $"Export queued: {result.FileName}",
+            result == null ? Severity.Error : Severity.Success);
+    }
+
+    private async Task QueuePdfExportAsync()
+    {
+        var result = await ExportApi.QueuePdfReportAsync(ReportId!, new DynamicLoadRequestDto
+        {
+            PageNumber = 1,
+            PageSize = 200,
+            SearchTerm = _search,
+            SortColumn = _sortColumn,
+            SortDirection = _sortDirection,
+            Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
+        });
+
+        Snackbar.Add(
+            result == null ? "Unable to queue PDF export." : $"PDF export queued: {result.FileName}",
+            result == null ? Severity.Error : Severity.Success);
+    }
+
+    private string? GetFilter(string id) => _filters.GetValueOrDefault(id);
+
+    private void SetFilter(string id, string? value) => _filters[id] = value ?? string.Empty;
+
+    private void SetBool(string id, bool value) => _filters[id] = value ? "1" : "0";
+
+    private bool IsChecked(string id)
+    {
+        var value = _filters.GetValueOrDefault(id);
+        return value == "1" || string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private IEnumerable<DynamicOptionDto> GetOptions(DynamicFieldDto field)
+        => _options.GetValueOrDefault(field.Id) ?? Enumerable.Empty<DynamicOptionDto>();
+
+    private static string? Placeholder(DynamicFieldDto field) => field.Type switch
+    {
+        "d" => "yyyy-MM-dd",
+        "dm" => "yyyy-MM",
+        "n" or "f" => "0",
+        _ => null,
+    };
+
+    private static string Format(object? value) => value switch
+    {
+        null => string.Empty,
+        bool boolean => boolean ? "Yes" : "No",
+        JsonElement element => element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Null => string.Empty,
+            _ => element.ToString(),
+        },
+        _ => Convert.ToString(value) ?? string.Empty,
+    };
+}

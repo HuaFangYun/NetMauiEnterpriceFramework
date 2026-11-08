@@ -1,0 +1,113 @@
+@page "/dashboard/maintenance/group-approval"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject ApprovalApiService ApprovalApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Approval</div>
+            <h1>Group Approval</h1>
+            <p>Review group creation, modification, and deletion requests.</p>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search request..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="GroupApprovalListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>Group ID</MudTh>
+            <MudTh>Group Name</MudTh>
+            <MudTh>Type</MudTh>
+            <MudTh>Requester</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Group ID">@context.GroupId</MudTd>
+            <MudTd DataLabel="Group Name">@context.GroupName</MudTd>
+            <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Color="Color.Info">@context.ApprovalType</MudChip></MudTd>
+            <MudTd DataLabel="Requester">@context.RequesterFullName</MudTd>
+            <MudTd DataLabel="Actions">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.GroupId, true))">Approve</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(_ => ProcessAsync(context.Id, context.GroupId, false))">Reject</MudButton>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No pending group requests.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<GroupApprovalListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<GroupApprovalListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await ApprovalApi.GetPendingGroupsAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        return new TableData<GroupApprovalListItemDto> { Items = response.Data, TotalItems = response.TotalCount };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task ProcessAsync(long id, string groupId, bool approve)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = approve ? "Approve Group" : "Reject Group",
+            ["Message"] = $"{(approve ? "Approve" : "Reject")} request for {groupId}?",
+            ["ConfirmText"] = approve ? "Approve" : "Reject",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>(approve ? "Approve Group" : "Reject Group", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = approve
+            ? await ApprovalApi.ApproveGroupAsync(id)
+            : await ApprovalApi.RejectGroupAsync(id);
+
+        Snackbar.Add(response.Message ?? "Request processed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

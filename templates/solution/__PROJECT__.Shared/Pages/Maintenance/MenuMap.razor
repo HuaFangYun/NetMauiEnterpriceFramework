@@ -1,0 +1,134 @@
+@page "/dashboard/maintenance/menu-map"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject SettingApiService SettingApi
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>Mapping Menu</h1>
+            <p>Assign menus to a group.</p>
+        </div>
+    </div>
+
+    <div class="table-toolbar">
+        <MudSelect T="string" @bind-Value="_groupId" Label="Group" Variant="Variant.Outlined" Margin="Margin.Dense">
+            @foreach (var group in _groups)
+            {
+                <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
+            }
+        </MudSelect>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => LoadAsync())">Load</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SaveAsync())">Save Mapping</MudButton>
+    </div>
+
+    @if (_flatMenus.Count == 0)
+    {
+        <MudAlert Severity="Severity.Info">Select a group and click Load.</MudAlert>
+    }
+    else
+    {
+        <MudPaper Elevation="0" Class="menu-map-list">
+            @foreach (var row in _flatMenus)
+            {
+                <div class="menu-map-row" style="margin-left:@(row.Depth * 24)px">
+                    <MudCheckBox T="bool"
+                                 Value="@_selected.Contains(row.Menu.Id)"
+                                 ValueChanged="@(v => Toggle(row.Menu.Id, v))"
+                                 Color="Color.Primary">
+                        @row.Menu.MenuName <span class="menu-map-unique">(@row.Menu.MenuUnique)</span>
+                    </MudCheckBox>
+                </div>
+            }
+        </MudPaper>
+    }
+</MudPaper>
+
+@code {
+    private List<DropdownItemDto> _groups = new();
+    private List<MenuRow> _flatMenus = new();
+    private HashSet<long> _selected = new();
+    private string? _groupId;
+    private bool _saving;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await SettingApi.GetGroupsAsync();
+        if (_groups.Count > 0)
+        {
+            _groupId = _groups[0].Value;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_groupId))
+        {
+            return;
+        }
+
+        var tree = await SettingApi.GetMenuTreeAsync();
+        _flatMenus = Flatten(tree, 0).ToList();
+
+        var assigned = await SettingApi.GetAssignedMenusAsync(_groupId);
+        _selected = assigned.ToHashSet();
+    }
+
+    private void Toggle(long id, bool selected)
+    {
+        if (selected)
+        {
+            _selected.Add(id);
+        }
+        else
+        {
+            _selected.Remove(id);
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_groupId))
+        {
+            Snackbar.Add("Select a group first.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = await SettingApi.SaveMenuMapAsync(new MenuMapDto
+            {
+                GroupId = _groupId,
+                MenuIds = _selected.ToList(),
+            });
+
+            Snackbar.Add(result.Message ?? "Save failed.", result.Success ? Severity.Success : Severity.Error);
+            if (result.Success)
+            {
+                await LoadAsync();
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private static IEnumerable<MenuRow> Flatten(IEnumerable<MenuTreeItemDto> items, int depth)
+    {
+        foreach (var item in items)
+        {
+            yield return new MenuRow(item, depth);
+            foreach (var child in Flatten(item.Children, depth + 1))
+            {
+                yield return child;
+            }
+        }
+    }
+
+    private sealed record MenuRow(MenuTreeItemDto Menu, int Depth);
+}

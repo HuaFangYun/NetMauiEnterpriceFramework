@@ -1,0 +1,21 @@
+@using MudBlazor
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>@Title</h1>
+            <p>@Subtitle</p>
+        </div>
+        <MudIcon Icon="@Icons.Material.Filled.Construction" Color="Color.Primary" Style="font-size:44px;" />
+    </div>
+
+    <MudAlert Severity="Severity.Info">
+        This module is under development. The shell, menu, auth, and tab behavior are already wired.
+    </MudAlert>
+</MudPaper>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Maintenance";
+    [Parameter] public string Subtitle { get; set; } = "Module placeholder";
+}

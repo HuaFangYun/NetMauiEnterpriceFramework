@@ -1,0 +1,168 @@
+@page "/dashboard/maintenance/menu-list"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject SettingApiService SettingApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>Menu Maintenance</h1>
+            <p>Manage navigation menus and screen definitions.</p>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add Menu</MudButton>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search menu..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="MenuListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>ID</MudTh>
+            <MudTh>Unique</MudTh>
+            <MudTh>Name</MudTh>
+            <MudTh>Level</MudTh>
+            <MudTh>Parent</MudTh>
+            <MudTh>Order</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.Id</MudTd>
+            <MudTd DataLabel="Unique">@context.MenuUnique</MudTd>
+            <MudTd DataLabel="Name">@context.MenuName</MudTd>
+            <MudTd DataLabel="Level">@context.ParentLevelId</MudTd>
+            <MudTd DataLabel="Parent">@(context.ParentName ?? context.MenuUniqueParent)</MudTd>
+            <MudTd DataLabel="Order">@context.OrderSeq</MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No menus found.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<MenuListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<MenuListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var sortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc";
+        var response = await SettingApi.GetMenusAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = sortDirection,
+        });
+
+        return new TableData<MenuListItemDto>
+        {
+            Items = response.Data,
+            TotalItems = response.TotalCount,
+        };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task OpenAddAsync()
+    {
+        var dialog = await DialogService.ShowAsync<AddEditMenuDialog>("Add Menu");
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task OpenEditAsync(MenuListItemDto menu)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Menu"] = new MenuEditDto
+            {
+                Id = menu.Id,
+                MenuUnique = menu.MenuUnique,
+                MenuName = menu.MenuName,
+                MenuUrl = menu.MenuUrl,
+                ParentLevelId = menu.ParentLevelId,
+                MenuUniqueParent = menu.MenuUniqueParent,
+                MenuIcon = menu.MenuIcon,
+                OrderSeq = menu.OrderSeq,
+                ComponentType = menu.ComponentType,
+                IsActive = menu.IsActive,
+            },
+        };
+
+        var dialog = await DialogService.ShowAsync<AddEditMenuDialog>("Edit Menu", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(MenuListItemDto menu)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Menu",
+            ["Message"] = $"Delete menu {menu.MenuName} ({menu.MenuUnique})?",
+            ["ConfirmText"] = "Delete",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Menu", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await SettingApi.DeleteMenuAsync(menu.Id);
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

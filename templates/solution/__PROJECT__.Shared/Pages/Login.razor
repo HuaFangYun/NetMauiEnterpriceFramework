@@ -1,0 +1,162 @@
+@page "/"
+@layout MainLayout
+@attribute [AllowAnonymous]
+@inject AuthService AuthService
+@inject ITokenStorage TokenStorage
+@inject INotifyAuthenticationState AuthStateNotifier
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudThemeProvider Theme="LoginTheme" />
+
+<MudGrid Justify="Justify.Center" Class="login-page" Style="min-height:100vh; background:#e7eeff;">
+    <MudItem xs="12" md="6" Class="login-brand-item">
+        <MudPaper Elevation="0" Class="login-brand-panel">
+            <div class="login-brand-top">
+                <div class="login-logo">
+                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+                </div>
+                <div>
+                    <div class="login-brand-name">@BrandName</div>
+                    <div class="login-brand-subtitle">Enterprise Portal</div>
+                </div>
+            </div>
+
+            <div class="login-brand-copy">
+                <h1>Securing your enterprise future today.</h1>
+                <p>Access your high-performance financial dashboard and manage corporate assets with precision-grade tools.</p>
+            </div>
+
+            <div class="login-brand-features">
+                <div><MudIcon Icon="@Icons.Material.Filled.VerifiedUser" /> Enterprise-grade security</div>
+                <div><MudIcon Icon="@Icons.Material.Filled.Insights" /> Operational insight</div>
+                <div><MudIcon Icon="@Icons.Material.Filled.Settings" /> Configurable modules</div>
+            </div>
+
+            <div class="login-brand-footer">© @DateTime.Now.Year @BrandName. Internal use only.</div>
+        </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="6" Class="login-form-item">
+        <MudPaper Elevation="0" Class="login-form-panel">
+            <div class="login-form-header">
+                <h2>Sign In</h2>
+                <p>Please enter your credentials to access your account.</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+            }
+
+            <EditForm Model="@_loginModel" OnValidSubmit="@OnLoginAsync">
+                <DataAnnotationsValidator />
+                <div class="login-form-fields">
+                    <MudTextField @bind-Value="_loginModel.UserId"
+                                  Label="Username"
+                                  Placeholder="Enter your ID"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Badge" />
+                    <MudTextField @bind-Value="_loginModel.Password"
+                                  Label="Password"
+                                  Placeholder="••••••••"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  InputType="InputType.Password"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Lock" />
+                    <div class="login-form-options">
+                        <MudCheckBox T="bool" @bind-Value="_loginModel.RememberMe" Color="Color.Primary">Remember this device</MudCheckBox>
+                        <MudLink Href="#" Underline="Underline.Always" Style="color:#004481;">Forgot Password?</MudLink>
+                    </div>
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Disabled="@_isLoading">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Login to Dashboard</span>
+                        }
+                    </MudButton>
+                </div>
+            </EditForm>
+
+            <div class="login-form-footer">
+                Need assistance? <MudLink Href="#" Underline="Underline.Always" Style="color:#004481;">Contact Support</MudLink>
+            </div>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private const string BrandName = "__PROJECT__";
+
+    private readonly LoginRequestDto _loginModel = new();
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    private readonly MudTheme LoginTheme = new()
+    {
+        PaletteLight = new PaletteLight
+        {
+            Primary = "#004481",
+            Secondary = "#b6171e",
+            Background = "#e7eeff",
+            Surface = "#ffffff",
+            AppbarBackground = "#ffffff",
+        },
+        Typography = new Typography
+        {
+            Default = new DefaultTypography
+            {
+                FontFamily = new[] { "Plus Jakarta Sans", "sans-serif" },
+            },
+        },
+    };
+
+    private async Task OnLoginAsync()
+    {
+        _isLoading = true;
+        _errorMessage = null;
+
+        try
+        {
+            var response = await AuthService.LoginAsync(_loginModel);
+            if (response == null)
+            {
+                _errorMessage = "Login failed.";
+                return;
+            }
+
+            await TokenStorage.SetAccessTokenAsync(response.AccessToken);
+            await TokenStorage.SetRefreshTokenAsync(response.RefreshToken);
+            AuthStateNotifier.NotifyUserLogin(response.User.UserId);
+            Snackbar.Add("Login successful", Severity.Success);
+
+            if (response.UrlDestination == "changepassword")
+            {
+                Navigation.NavigateTo("/change-password", true);
+            }
+            else
+            {
+                Navigation.NavigateTo("/dashboard", true);
+            }
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+}

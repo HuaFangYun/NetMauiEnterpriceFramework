@@ -1,0 +1,171 @@
+@page "/dashboard/maintenance/role-list"
+@layout AuthenticatedLayout
+@attribute [Authorize]
+@inject SettingApiService SettingApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <div class="page-heading">
+        <div>
+            <div class="dashboard-kicker">Maintenance</div>
+            <h1>Role Maintenance</h1>
+            <p>Manage user-role assignments and access flags.</p>
+        </div>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add Role</MudButton>
+    </div>
+
+    <div class="table-toolbar">
+        <MudTextField @bind-Value="_search"
+                      Placeholder="Search role..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Adornment="Adornment.Start"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
+                      Immediate="true" />
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Search</MudButton>
+    </div>
+
+    <MudTable T="RoleListItemDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="true"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0">
+        <HeaderContent>
+            <MudTh>User ID</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Group</MudTh>
+            <MudTh>Add/Edit</MudTh>
+            <MudTh>Delete</MudTh>
+            <MudTh>Read Only</MudTh>
+            <MudTh>Status</MudTh>
+            <MudTh>Actions</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="User ID">@context.UserId</MudTd>
+            <MudTd DataLabel="Full Name">@context.FullName</MudTd>
+            <MudTd DataLabel="Group">@context.GroupName</MudTd>
+            <MudTd DataLabel="Add/Edit">
+                <MudChip T="string" Size="Size.Small" Color="@(context.CanAddEdit ? Color.Success : Color.Default)">@(context.CanAddEdit ? "Yes" : "No")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Delete">
+                <MudChip T="string" Size="Size.Small" Color="@(context.CanDelete ? Color.Success : Color.Default)">@(context.CanDelete ? "Yes" : "No")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Read Only">
+                <MudChip T="string" Size="Size.Small" Color="@(context.CanReadOnly ? Color.Warning : Color.Default)">@(context.CanReadOnly ? "Yes" : "No")</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Status">
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Active</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default">Inactive</MudChip>
+                }
+            </MudTd>
+            <MudTd DataLabel="Actions">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No roles found.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private MudTable<RoleListItemDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<RoleListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var sortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc";
+        var response = await SettingApi.GetRolesAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = sortDirection,
+        });
+
+        return new TableData<RoleListItemDto>
+        {
+            Items = response.Data,
+            TotalItems = response.TotalCount,
+        };
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task OpenAddAsync()
+    {
+        var dialog = await DialogService.ShowAsync<AddEditRoleDialog>("Add Role");
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task OpenEditAsync(RoleListItemDto role)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Role"] = new RoleEditDto
+            {
+                UserId = role.UserId,
+                GroupId = role.GroupId,
+                CanAddEdit = role.CanAddEdit,
+                CanDelete = role.CanDelete,
+                CanReadOnly = role.CanReadOnly,
+                ResponsibleToUserId = role.ResponsibleToUserId,
+                IsActive = role.IsActive,
+            },
+        };
+
+        var dialog = await DialogService.ShowAsync<AddEditRoleDialog>("Edit Role", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task DeleteAsync(RoleListItemDto role)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Role",
+            ["Message"] = $"Delete role for {role.UserId}?",
+            ["ConfirmText"] = "Delete",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Role", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await SettingApi.DeleteRoleAsync(role.UserId);
+        Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+}

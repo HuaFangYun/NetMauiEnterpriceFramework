@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build output
+/dist/
+/coverage/
+**/bin/Debug/
+**/bin/Release/
+**/obj/
+**/TestResults/
+**/exports/
+*.user
+*.suo
+*.tmp
+
+# Runtime secrets and local config
+.env
+.env.*
+!.env.example
+*.log
+*.db
+*.sqlite
+
+# IDE
+.vscode/
+.idea/
+.vs/
+
+# AI / working documents (not part of the framework package)
+docs/
+.commandcode/
+.agents/
+AGENTS.md
+
+# Test and QA artifacts
+/_*/
+*.tgz
+*.pdf
+*.xlsx
+qa*.png
+maui-*.png
+uat-*.png
+cross-*.png
+realtime-*.png
+
+# Local scaffold configs; keep the example
+scaffold.*.json
+!scaffold.example.json
+
+# OS
+.DS_Store
+Thumbs.db

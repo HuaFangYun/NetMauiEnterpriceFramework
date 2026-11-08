@@ -1,0 +1,14 @@
+﻿[
+    {
+        "gender_code":  "L",
+        "gender_name":  "LAKI-LAKI",
+        "gender_T24_code":  "MALE",
+        "gender_dukcapil_code":  "Laki-Laki"
+    },
+    {
+        "gender_code":  "P",
+        "gender_name":  "PEREMPUAN",
+        "gender_T24_code":  "FEMALE",
+        "gender_dukcapil_code":  "Perempuan"
+    }
+]

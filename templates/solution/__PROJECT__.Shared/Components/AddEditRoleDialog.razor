@@ -1,0 +1,110 @@
+@inject SettingApiService SettingApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.UserId" Label="User" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit">
+                    @foreach (var user in _users)
+                    {
+                        <MudSelectItem Value="@user.Value">@user.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.GroupId" Label="Group" Variant="Variant.Outlined" Required="true">
+                    @foreach (var group in _groups)
+                    {
+                        <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.ResponsibleToUserId" Label="Responsible To (User ID)" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6" Class="d-flex flex-column">
+                <MudCheckBox T="bool" @bind-Value="_model.CanAddEdit" Color="Color.Primary">Can Add / Edit</MudCheckBox>
+                <MudCheckBox T="bool" @bind-Value="_model.CanDelete" Color="Color.Primary">Can Delete</MudCheckBox>
+                <MudCheckBox T="bool" @bind-Value="_model.CanReadOnly" Color="Color.Primary">Read Only</MudCheckBox>
+                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SubmitAsync())">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public RoleEditDto? Role { get; set; }
+
+    private RoleEditDto _model = new();
+    private List<DropdownItemDto> _groups = new();
+    private List<DropdownItemDto> _users = new();
+    private bool _saving;
+
+    private bool IsEdit => Role != null;
+    private string Title => IsEdit ? "Edit Role" : "Add Role";
+
+    protected override async Task OnInitializedAsync()
+    {
+        _groups = await SettingApi.GetGroupsAsync();
+        _users = await SettingApi.GetUsersAsync();
+
+        if (Role != null)
+        {
+            _model = new RoleEditDto
+            {
+                UserId = Role.UserId,
+                GroupId = Role.GroupId,
+                CanAddEdit = Role.CanAddEdit,
+                CanDelete = Role.CanDelete,
+                CanReadOnly = Role.CanReadOnly,
+                ResponsibleToUserId = Role.ResponsibleToUserId,
+                IsActive = Role.IsActive,
+            };
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_model.UserId) || string.IsNullOrWhiteSpace(_model.GroupId))
+        {
+            Snackbar.Add("User and group are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = IsEdit
+                ? await SettingApi.UpdateRoleAsync(Role!.UserId, _model)
+                : await SettingApi.CreateRoleAsync(_model);
+
+            if (result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Saved.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}
