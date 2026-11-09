@@ -46,6 +46,14 @@ npm pack
 npm install -g ./create-enterprise-agentic-framework-0.1.0.tgz
 ```
 
+Jika PowerShell tidak menemukan command setelah install global, jalankan binary langsung:
+
+```powershell
+& "$env:APPDATA\npm\create-enterprise-agentic-framework.cmd"
+```
+
+Atau tambahkan `%APPDATA%\npm` ke `PATH` lalu buka terminal baru.
+
 ### Tanpa instalasi global
 
 ```bash

@@ -84,7 +84,9 @@ async function askQuestions(args = {}) {
         name: 'adminPasswordConfirm',
         message: 'Confirm admin password',
         validate: (value, values) =>
-          value === values.adminPassword ? true : 'Passwords do not match.',
+          !values || typeof values.adminPassword !== 'string' || value === values.adminPassword
+            ? true
+            : 'Passwords do not match.',
       },
       {
         type: 'text',
