@@ -102,6 +102,47 @@ public class ParameterEngineService : IParameterEngineService
         return fields.Count > 0 ? fields : await IntrospectFieldsAsync(tableName);
     }
 
+    public async Task<Dictionary<string, List<DropdownItemDto>>> GetOptionsAsync(string tableName)
+    {
+        tableName = NormalizeTable(tableName);
+        var fields = await GetFieldsAsync(tableName);
+        var result = new Dictionary<string, List<DropdownItemDto>>(StringComparer.OrdinalIgnoreCase);
+
+        await using var connection = new SqlConnection(_context.Database.GetConnectionString());
+        await connection.OpenAsync();
+
+        foreach (var field in fields.Where(e => string.Equals(e.FieldType, "list", StringComparison.OrdinalIgnoreCase)))
+        {
+            if (string.IsNullOrWhiteSpace(field.FieldReff)
+                || !field.FieldReff.TrimStart().StartsWith("select", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            try
+            {
+                using var command = new SqlCommand(field.FieldReff, connection);
+                using var reader = await command.ExecuteReaderAsync();
+                var options = new List<DropdownItemDto>();
+                while (await reader.ReadAsync())
+                {
+                    options.Add(new DropdownItemDto
+                    {
+                        Value = reader.GetValue(0)?.ToString() ?? string.Empty,
+                        Text = reader.GetValue(1)?.ToString() ?? string.Empty,
+                    });
+                }
+                result[field.FieldName] = options;
+            }
+            catch
+            {
+                result[field.FieldName] = new List<DropdownItemDto>();
+            }
+        }
+
+        return result;
+    }
+
     public async Task<ParameterListResponseDto> GetListAsync(string tableName, DataTableRequestDto request)
     {
         tableName = NormalizeTable(tableName);

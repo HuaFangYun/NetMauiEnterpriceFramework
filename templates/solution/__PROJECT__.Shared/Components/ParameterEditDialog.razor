@@ -1,19 +1,20 @@
+@using __PROJECT__.Application.DTOs.General
 @inject ParameterApiService ParameterApi
 @inject ISnackbar Snackbar
 
 <MudDialog>
     <TitleContent>
-        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Parameter" : "Add Parameter")</MudText>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Record" : "Add New Record")</MudText>
     </TitleContent>
     <DialogContent>
-        <MudGrid Spacing="3">
+        <MudGrid Spacing="2">
             @foreach (var field in Fields)
             {
                 var value = _values.GetValueOrDefault(field.FieldName);
                 var label = field.FieldDesc ?? field.FieldName;
                 if (string.Equals(field.FieldType, "bit", StringComparison.OrdinalIgnoreCase))
                 {
-                    <MudItem xs="12" md="6">
+                    <MudItem xs="12" Class="d-flex align-center">
                         <MudCheckBox T="bool"
                                      Value="@IsTrue(value)"
                                      ValueChanged="@(v => SetBool(field.FieldName, v))"
@@ -22,9 +23,29 @@
                                      Disabled="@(IsEdit && field.IsKey)" />
                     </MudItem>
                 }
+                else if (string.Equals(field.FieldType, "list", StringComparison.OrdinalIgnoreCase)
+                         && _options.TryGetValue(field.FieldName, out var options)
+                         && options.Count > 0)
+                {
+                    <MudItem xs="12">
+                        <MudSelect T="string"
+                                   Value="@value"
+                                   ValueChanged="@(v => SetValue(field.FieldName, v))"
+                                   Label="@label"
+                                   Variant="Variant.Outlined"
+                                   Required="@field.IsMandatory"
+                                   Disabled="@(IsEdit && field.IsKey)"
+                                   FullWidth="true">
+                            @foreach (var option in options)
+                            {
+                                <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudItem>
+                }
                 else
                 {
-                    <MudItem xs="12" md="6">
+                    <MudItem xs="12">
                         <MudTextField T="string"
                                       Value="@value"
                                       ValueChanged="@(v => SetValue(field.FieldName, v))"
@@ -39,9 +60,9 @@
         </MudGrid>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SaveAsync())">
-            @(_saving ? "Saving..." : "Send for Approval")
+            @(_saving ? "Saving..." : "Save")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -60,12 +81,15 @@
     public Dictionary<string, string>? Row { get; set; }
 
     private readonly Dictionary<string, string> _values = new(StringComparer.OrdinalIgnoreCase);
+    private Dictionary<string, List<DropdownItemDto>> _options = new(StringComparer.OrdinalIgnoreCase);
     private bool _saving;
 
     private bool IsEdit => Row != null;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
+        _options = await ParameterApi.GetOptionsAsync(TableName);
+
         if (Row != null)
         {
             foreach (var pair in Row.Where(e => !e.Key.Equals("__key", StringComparison.OrdinalIgnoreCase)))

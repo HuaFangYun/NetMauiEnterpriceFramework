@@ -8,6 +8,13 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject TabStateService TabService
+@inject ApiService ApiService
+@inject ITokenStorage TokenStorage
+
+@if (!IsCardsView)
+{
+    <MudBreadcrumbs Items="BreadcrumbItems" Separator=">" Class="mb-3" />
+}
 
 <MudPaper Elevation="0" Class="dashboard-card">
     <div class="page-heading">
@@ -18,11 +25,12 @@
         </div>
         @if (IsMakerView)
         {
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" OnClick="@(_ => OpenMakerCards())">All Cards</MudButton>
-        }
-        @if (IsCardsView)
-        {
-            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" StartIcon="@Icons.Material.Filled.UploadFile" OnClick="@(_ => OpenImportApprovals())">Import Approvals</MudButton>
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload" Disabled="@_exporting" OnClick="ExportMakerAsync">
+                    @(_exporting ? "Exporting..." : "Export Excel")
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add</MudButton>
+            </div>
         }
     </div>
 
@@ -64,41 +72,43 @@
     }
     else if (IsMakerView)
     {
-        <div class="table-toolbar">
-            <MudTextField @bind-Value="_search"
-                          Placeholder="Search parameter..."
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" />
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadMakerAsync())">Search</MudButton>
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add</MudButton>
-        </div>
-
         <MudTable T="Dictionary<string, string>"
                   @ref="_makerTable"
                   ServerData="LoadMakerData"
                   Hover="true"
-                  Dense="true"
+                  Dense="false"
                   Breakpoint="Breakpoint.Sm"
-                  Elevation="0">
+                  Elevation="0"
+                  HorizontalScrollbar="true">
+            <ToolBarContent>
+                <MudSpacer />
+                <MudTextField @bind-Value="_search"
+                              @bind-Value:after="ReloadMakerAsync"
+                              Label="Search"
+                              Placeholder="Search parameter..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              Class="user-search" />
+            </ToolBarContent>
             <HeaderContent>
+                <MudTh Style="text-align:center;">Actions</MudTh>
                 @foreach (var field in _makerFields)
                 {
                     <MudTh>@(field.FieldDesc ?? field.FieldName)</MudTh>
                 }
-                <MudTh>Actions</MudTh>
             </HeaderContent>
             <RowTemplate>
+                <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary" OnClick="@(_ => OpenEditAsync(context))" />
+                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
+                </MudTd>
                 @foreach (var field in _makerFields)
                 {
                     <MudTd DataLabel="@(field.FieldDesc ?? field.FieldName)">@context.GetValueOrDefault(field.FieldName)</MudTd>
                 }
-                <MudTd DataLabel="Actions">
-                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" OnClick="@(_ => OpenEditAsync(context))" />
-                    <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
-                </MudTd>
             </RowTemplate>
             <NoRecordsContent>
                 <MudText>No parameter rows.</MudText>
@@ -173,7 +183,9 @@
     private MudTable<Dictionary<string, string>>? _makerTable;
     private MudTable<ParameterPendingListItemDto>? _pendingTable;
     private string? _search;
+    private string? _cardDescription;
     private bool _loading;
+    private bool _exporting;
 
     private bool IsCardsView => string.IsNullOrWhiteSpace(TableName);
     private bool IsMakerView => string.Equals(Mode, "maker", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(TableName);
@@ -182,6 +194,14 @@
     private bool IsApprovalCards => IsCardsView && string.Equals(Mode, "approval", StringComparison.OrdinalIgnoreCase);
     private bool IsGenericCards => IsCardsView && string.IsNullOrWhiteSpace(Mode);
 
+    private List<BreadcrumbItem> BreadcrumbItems =>
+    [
+        new("Dashboard", href: "/dashboard"),
+        new("Maintenance", href: null),
+        new(IsMakerView ? "Parameter Maintenance Maker" : "Parameter Maintenance Approval", href: null),
+        new(_cardDescription ?? TableName ?? string.Empty, href: null, disabled: true),
+    ];
+
     private string Heading => IsMakerCards
         ? "Parameter Maintenance Maker"
         : IsApprovalCards
@@ -189,8 +209,8 @@
             : IsCardsView
                 ? "Parameter System"
                 : IsMakerView
-                    ? $"Parameter Maker — {TableName}"
-                    : "Parameter Approval";
+                    ? _cardDescription ?? "Parameter Maker"
+                    : _cardDescription ?? "Parameter Approval";
 
     private string Subtitle => IsCardsView
         ? "Choose a parameter table to maintain."
@@ -209,6 +229,13 @@
             if (IsMakerView)
             {
                 _makerFields = await ParameterApi.GetFieldsAsync(TableName!);
+                _cards = await ParameterApi.GetCardsAsync();
+                _cardDescription = _cards.FirstOrDefault(c => c.TableName == TableName)?.Description;
+            }
+            else if (IsApprovalView)
+            {
+                _cards = await ParameterApi.GetCardsAsync();
+                _cardDescription = _cards.FirstOrDefault(c => c.TableName == TableName)?.Description;
             }
             else if (IsCardsView)
             {
@@ -289,15 +316,31 @@
             new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.TableName });
     }
 
-    private void OpenMakerCards()
-        => TabService.OpenTab(
-            "Parameter Maker",
-            ParameterComponent,
-            "/dashboard/maintenance/parameter-system/maker",
-            new Dictionary<string, object> { ["Mode"] = "maker" });
+    private async Task ExportMakerAsync()
+    {
+        var baseAddress = ApiService.ApiBaseAddress;
+        if (string.IsNullOrWhiteSpace(baseAddress) || string.IsNullOrWhiteSpace(TableName))
+        {
+            Snackbar.Add("API address or table is not available.", Severity.Error);
+            return;
+        }
 
-    private void OpenImportApprovals()
-        => TabService.OpenTab("Import Approval", ImportApprovalComponent, "/dashboard/maintenance/import-approval");
+        _exporting = true;
+        try
+        {
+            var token = await TokenStorage.GetAccessTokenAsync();
+            var query = $"?access_token={Uri.EscapeDataString(token ?? string.Empty)}";
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                query += $"&search={Uri.EscapeDataString(_search)}";
+            }
+            Navigation.NavigateTo($"{baseAddress}/api/parameter/{Uri.EscapeDataString(TableName)}/export{query}", forceLoad: true);
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
 
     private async Task ReloadMakerAsync()
     {

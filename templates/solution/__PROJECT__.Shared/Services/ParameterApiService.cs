@@ -17,6 +17,11 @@ public class ParameterApiService
     public async Task<List<ParameterFieldDto>> GetFieldsAsync(string tableName)
         => await _api.GetFromJsonAsync<List<ParameterFieldDto>>($"api/parameter/{Uri.EscapeDataString(tableName)}/fields") ?? new List<ParameterFieldDto>();
 
+    public async Task<Dictionary<string, List<DropdownItemDto>>> GetOptionsAsync(string tableName)
+        => await _api.GetFromJsonAsync<Dictionary<string, List<DropdownItemDto>>>(
+               $"api/parameter/{Uri.EscapeDataString(tableName)}/options")
+           ?? new Dictionary<string, List<DropdownItemDto>>(StringComparer.OrdinalIgnoreCase);
+
     public async Task<ParameterListResponseDto> GetListAsync(string tableName, DataTableRequestDto request)
         => await _api.PostRawFromJsonAsync<DataTableRequestDto, ParameterListResponseDto>(
                $"api/parameter/{Uri.EscapeDataString(tableName)}/list", request)
