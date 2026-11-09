@@ -5,7 +5,7 @@
 {
     <MudNavGroup Title="@Item.MenuName"
                  Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)"
-                 Expanded="true">
+                 Expanded="false">
         @if (Item.Children.All(child => child.Children is not { Count: > 0 }))
         {
             <div class="menu-tile-grid">

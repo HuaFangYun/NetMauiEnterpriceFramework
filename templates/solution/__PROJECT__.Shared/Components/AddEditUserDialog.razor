@@ -1,3 +1,5 @@
+@using __PROJECT__.Application.DTOs.General
+@using __PROJECT__.Application.DTOs.User
 @inject SettingApiService SettingApi
 @inject ISnackbar Snackbar
 
@@ -6,57 +8,85 @@
         <MudText Typo="Typo.h6">@Title</MudText>
     </TitleContent>
     <DialogContent>
-        <MudGrid Spacing="3">
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.UserId" Label="User ID" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.FullName" Label="Full Name" Variant="Variant.Outlined" Required="true" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.Email" Label="Email" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.PhoneNumber" Label="Phone Number" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.KodeCabang" Label="Branch Code" Variant="Variant.Outlined" Required="true" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.NomorIndukKaryawan" Label="Employee Number" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.GroupId" Label="Role / Group" Variant="Variant.Outlined" Required="true">
-                    @foreach (var group in _groups)
-                    {
-                        <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.GenderId" Label="Gender" Variant="Variant.Outlined">
-                    @foreach (var gender in _genders)
-                    {
-                        <MudSelectItem Value="@gender.Value">@gender.Text</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.Password"
-                              Label="@(IsEdit ? "New Password (optional)" : "Password")"
-                              Variant="Variant.Outlined"
-                              InputType="InputType.Password"
-                              Required="@(!IsEdit)" />
-            </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex align-center">
-                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
-            </MudItem>
-        </MudGrid>
+        <MudForm @ref="_form">
+            <MudGrid Spacing="2">
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.UserId"
+                                  Label="User Id"
+                                  Variant="Variant.Text"
+                                  Required="true"
+                                  Disabled="@IsEdit" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.NomorIndukKaryawan"
+                                  Label="Nomor Induk Karyawan"
+                                  Variant="Variant.Text" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.FullName"
+                                  Label="Full Name"
+                                  Variant="Variant.Text"
+                                  Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string"
+                               @bind-Value="_model.GenderId"
+                               Label="Gender"
+                               Variant="Variant.Text"
+                               Required="true">
+                        @foreach (var gender in _genders)
+                        {
+                            <MudSelectItem Value="@gender.Value">@gender.Text</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Email"
+                                  Label="Email"
+                                  Variant="Variant.Text"
+                                  InputType="InputType.Email"
+                                  Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.PhoneNumber"
+                                  Label="Phone Number"
+                                  Variant="Variant.Text" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.KodeCabang"
+                                  Label="Branch Code"
+                                  Variant="Variant.Text"
+                                  Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="string"
+                               @bind-Value="_model.GroupId"
+                               Label="Role / Group"
+                               Variant="Variant.Text"
+                               Required="true">
+                        @foreach (var group in _groups)
+                        {
+                            <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="_model.Password"
+                                  Label="@(IsEdit ? "New Password (optional)" : "Password")"
+                                  Variant="Variant.Text"
+                                  InputType="InputType.Password"
+                                  Required="@(!IsEdit)" />
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex align-center">
+                    <MudCheckBox T="bool" @bind-Value="_model.IsActive" Label="Is Active?" Color="Color.Primary" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
     </DialogContent>
     <DialogActions>
-        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => MudDialog.Cancel())">Close</MudButton>
         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SubmitAsync())">
-            @(_saving ? "Saving..." : "Save")
+            @(_saving ? "Saving..." : "Save Changes")
         </MudButton>
     </DialogActions>
 </MudDialog>
@@ -66,8 +96,9 @@
     private IMudDialogInstance MudDialog { get; set; } = default!;
 
     [Parameter]
-    public UserEditDto? User { get; set; }
+    public UserListItemDto? User { get; set; }
 
+    private MudForm? _form;
     private UserEditDto _model = new();
     private List<DropdownItemDto> _groups = new();
     private List<DropdownItemDto> _genders = new();
