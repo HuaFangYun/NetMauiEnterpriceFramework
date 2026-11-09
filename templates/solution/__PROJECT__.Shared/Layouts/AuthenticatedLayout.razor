@@ -394,6 +394,23 @@
         {
             parameters["ReportId"] = item.MenuUrl;
         }
+        else if (item.ComponentType.Contains("ParameterSystem", StringComparison.OrdinalIgnoreCase)
+                 && !string.IsNullOrWhiteSpace(item.MenuUrl))
+        {
+            var segments = item.MenuUrl.Trim('/').Split('/');
+            var modeIndex = Array.FindIndex(segments, segment =>
+                segment.Equals("maker", StringComparison.OrdinalIgnoreCase)
+                || segment.Equals("approval", StringComparison.OrdinalIgnoreCase));
+
+            if (modeIndex >= 0)
+            {
+                parameters["Mode"] = segments[modeIndex];
+                if (modeIndex + 1 < segments.Length)
+                {
+                    parameters["TableName"] = segments[modeIndex + 1];
+                }
+            }
+        }
 
         TabService.OpenTab(
             item.MenuName,

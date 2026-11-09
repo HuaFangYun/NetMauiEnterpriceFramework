@@ -38,14 +38,24 @@
                 <MudItem xs="12" sm="6" md="4">
                     <MudPaper Elevation="0" Class="parameter-card">
                         <div class="parameter-card-head">
-                            <MudIcon Icon="@Icons.Material.Filled.Settings" Color="Color.Primary" />
+                            <MudIcon Icon="@MenuIconResolver.GetIcon(card.Icon)" Color="Color.Primary" />
                             <MudChip T="string" Size="Size.Small" Color="@(card.PendingCount > 0 ? Color.Warning : Color.Default)">@card.PendingCount pending</MudChip>
                         </div>
                         <h3>@card.Description</h3>
-                        <code>@card.TableName</code>
                         <div class="parameter-card-actions">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                            @if (IsMakerCards && card.IsMaker)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
+                            }
+                            @if (IsApprovalCards && card.IsApproval)
+                            {
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                            }
+                            @if (IsGenericCards)
+                            {
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                            }
                         </div>
                     </MudPaper>
                 </MudItem>
@@ -165,15 +175,22 @@
     private string? _search;
     private bool _loading;
 
-    private bool IsCardsView => !IsMakerView && !IsApprovalView;
+    private bool IsCardsView => string.IsNullOrWhiteSpace(TableName);
     private bool IsMakerView => string.Equals(Mode, "maker", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(TableName);
-    private bool IsApprovalView => string.Equals(Mode, "approval", StringComparison.OrdinalIgnoreCase);
+    private bool IsApprovalView => string.Equals(Mode, "approval", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(TableName);
+    private bool IsMakerCards => IsCardsView && string.Equals(Mode, "maker", StringComparison.OrdinalIgnoreCase);
+    private bool IsApprovalCards => IsCardsView && string.Equals(Mode, "approval", StringComparison.OrdinalIgnoreCase);
+    private bool IsGenericCards => IsCardsView && string.IsNullOrWhiteSpace(Mode);
 
-    private string Heading => IsCardsView
-        ? "Parameter System"
-        : IsMakerView
-            ? $"Parameter Maker — {TableName}"
-            : "Parameter Approval";
+    private string Heading => IsMakerCards
+        ? "Parameter Maintenance Maker"
+        : IsApprovalCards
+            ? "Parameter Maintenance Approval"
+            : IsCardsView
+                ? "Parameter System"
+                : IsMakerView
+                    ? $"Parameter Maker — {TableName}"
+                    : "Parameter Approval";
 
     private string Subtitle => IsCardsView
         ? "Choose a parameter table to maintain."

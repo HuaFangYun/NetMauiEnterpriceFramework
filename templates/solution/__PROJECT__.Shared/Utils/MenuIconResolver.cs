@@ -1,27 +1,59 @@
+using System.Reflection;
+
 using MudBlazor;
 
 namespace __PROJECT__.Shared.Utils;
 
 public static class MenuIconResolver
 {
-    public static string GetIcon(string? iconName) => iconName switch
+    private static readonly Type FilledIcons = typeof(Icons.Material.Filled);
+
+    public static string GetIcon(string? iconName)
     {
-        "Home" => Icons.Material.Filled.Home,
-        "Person" => Icons.Material.Filled.Person,
-        "Lock" => Icons.Material.Filled.Lock,
-        "Notifications" => Icons.Material.Filled.Notifications,
-        "Settings" => Icons.Material.Filled.Settings,
-        "EmojiPeople" => Icons.Material.Filled.EmojiPeople,
-        "Groups" => Icons.Material.Filled.Groups,
-        "Hail" => Icons.Material.Filled.Hail,
-        "MenuBook" => Icons.Material.Filled.MenuBook,
-        "AdminPanelSettings" => Icons.Material.Filled.AdminPanelSettings,
-        "FormatListBulleted" => Icons.Material.Filled.FormatListBulleted,
-        "Checklist" => Icons.Material.Filled.Checklist,
-        "AddModerator" => Icons.Material.Filled.AddModerator,
-        "GppGood" => Icons.Material.Filled.GppGood,
-        "Flag" => Icons.Material.Filled.Flag,
-        "PinDrop" => Icons.Material.Filled.PinDrop,
-        _ => Icons.Material.Filled.Circle,
-    };
+        if (string.IsNullOrWhiteSpace(iconName))
+        {
+            return Icons.Material.Filled.Circle;
+        }
+
+        var name = iconName switch
+        {
+            "fa fa-gear" => "Settings",
+            "fa fa-user-circle" => "EmojiPeople",
+            "fa fa-group" => "Groups",
+            "fa fa-user-o" => "Hail",
+            "fa fa-pagelines" => "MenuBook",
+            "fa fa-cc-jcb" => "AdminPanelSettings",
+            "fa fa-list-ul" => "FormatListBulleted",
+            "fa fa-th-list" => "Checklist",
+            "fa fa-cc-mastercard" => "AddModerator",
+            "fa fa-cc-paypal" => "GppGood",
+            "fa fa-flag" => "Flag",
+            "fa fa-map-pin" => "PinDrop",
+            "fa fa-flask" => "Science",
+            "GroupWork" => "Groups",
+            "SettingsApplications" => "Settings",
+            "SystemUpdateAlt" => "SystemUpdateAlt",
+            "SettingsSystemDaydream" => "Settings",
+            "FileCopy" => "FileCopy",
+            _ => iconName,
+        };
+
+        var field = FilledIcons.GetField(name, BindingFlags.Public | BindingFlags.Static);
+        if (field?.GetValue(null) is string icon)
+        {
+            return icon;
+        }
+
+        if (char.IsLower(name[0]))
+        {
+            var pascalCase = char.ToUpperInvariant(name[0]) + name[1..];
+            field = FilledIcons.GetField(pascalCase, BindingFlags.Public | BindingFlags.Static);
+            if (field?.GetValue(null) is string pascalIcon)
+            {
+                return pascalIcon;
+            }
+        }
+
+        return Icons.Material.Filled.Circle;
+    }
 }
