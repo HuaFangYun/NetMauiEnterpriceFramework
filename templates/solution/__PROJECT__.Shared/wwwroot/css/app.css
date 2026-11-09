@@ -26,6 +26,7 @@ html, body {
 .login-form-item {
     display: flex;
     align-items: center;
+    justify-content: center;
     min-height: 100vh;
 }
 
@@ -437,8 +438,13 @@ html, body {
         display: none;
     }
 
+    .login-form-item {
+        padding: 24px;
+    }
+
     .login-form-panel {
-        margin: 24px;
+        margin: 0 auto;
         padding: 28px;
+        width: 100%;
     }
 }

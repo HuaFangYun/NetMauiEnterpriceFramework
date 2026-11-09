@@ -132,16 +132,32 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AppClient", policy =>
     {
-        if (allowedOrigins.Length > 0)
+        if (builder.Environment.IsDevelopment())
         {
-            policy.WithOrigins(allowedOrigins).AllowCredentials();
+            policy
+                .SetIsOriginAllowed(origin =>
+                {
+                    if (!Uri.TryCreate(origin, UriKind.Absolute, out var uri))
+                    {
+                        return false;
+                    }
+
+                    return uri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+                        || uri.Host.Equals("127.0.0.1", StringComparison.OrdinalIgnoreCase)
+                        || uri.Host.Equals("::1", StringComparison.OrdinalIgnoreCase);
+                })
+                .AllowCredentials()
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        }
+        else if (allowedOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedOrigins).AllowCredentials().AllowAnyHeader().AllowAnyMethod();
         }
         else
         {
-            policy.AllowAnyOrigin();
+            policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
         }
-
-        policy.AllowAnyHeader().AllowAnyMethod();
     });
 });
 
