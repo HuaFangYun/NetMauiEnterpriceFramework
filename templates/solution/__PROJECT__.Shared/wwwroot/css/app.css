@@ -340,9 +340,60 @@ html, body {
     margin-top: 16px;
 }
 
+.notification-wrapper {
+    display: inline-flex;
+    position: relative;
+}
+
+.notification-popover {
+    z-index: 1301;
+}
+
+.notification-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    background: transparent;
+}
+
+.notification-panel {
+    width: min(480px, calc(100vw - 32px));
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+}
+
+.notification-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 18px;
+    border-bottom: 1px solid #eef2f8;
+}
+
+.notification-list {
+    max-height: 420px;
+    overflow-y: auto;
+}
+
 .notification-item {
-    min-width: 280px;
-    padding: 4px 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    min-width: 0;
+    padding: 14px 18px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-item-copy {
+    flex: 1;
+    min-width: 0;
 }
 
 .notification-title {
@@ -353,12 +404,120 @@ html, body {
 .notification-body {
     color: #727782;
     font-size: 12px;
+    line-height: 1.45;
 }
 
 .notification-time {
     color: #9aa0a6;
     font-size: 11px;
     margin-top: 2px;
+}
+
+.notification-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 36px 16px;
+}
+
+.notification-page-panel {
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+}
+
+.notification-search {
+    max-width: 360px;
+}
+
+.menu-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 8px;
+    padding: 4px 0 8px;
+}
+
+.menu-tile {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 76px;
+    padding: 10px 4px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: #004481;
+    cursor: pointer;
+    text-align: center;
+}
+
+.menu-tile:hover {
+    background: #f1f5fb;
+}
+
+.menu-tile:disabled {
+    cursor: not-allowed;
+    opacity: .45;
+}
+
+.menu-tile span {
+    color: #263143;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.enterprise-tabs {
+    background: #ffffff;
+    border-radius: 12px 12px 0 0;
+}
+
+.enterprise-tabs .mud-tabs-toolbar {
+    background: #ffffff;
+    border-bottom: 1px solid #e7eeff;
+}
+
+.enterprise-tabs .mud-tab {
+    min-height: 52px;
+    color: #414751;
+    text-transform: none;
+}
+
+.enterprise-tabs .mud-tab.mud-tab-active {
+    color: #004481;
+}
+
+.enterprise-tabs .mud-tab-slider {
+    height: 3px;
+    background-color: #004481;
+}
+
+.enterprise-tabs .mud-tabs-panels {
+    padding-top: 0;
+}
+
+.tab-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.tab-header-actions {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 2px;
+}
+
+.tab-header-actions .mud-icon-button {
+    padding: 2px;
+}
+
+.tab-header-actions .mud-icon-root {
+    color: #9aa0a6;
+    font-size: 18px;
 }
 
 .mud-drawer .mud-nav-link-text {

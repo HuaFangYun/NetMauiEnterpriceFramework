@@ -17,9 +17,9 @@
 
 <MudLayout Class="@(_isDarkMode ? "app-dark" : "app-light")">
     <MudAppBar Elevation="1" Style="background:#ffffff;color:#004481;">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" OnClick="@(_ => ToggleDrawer())" />
         <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" />
         <MudText Typo="Typo.h6" Class="ml-2" Style="font-weight:800;">@BrandName</MudText>
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Class="ml-2" OnClick="@(_ => ToggleDrawer())" />
         <MudSpacer />
         <MudAutocomplete T="MenuItemDto"
                          Value="_searchItem"
@@ -33,43 +33,72 @@
                          AdornmentIcon="@Icons.Material.Filled.Search"
                          Style="max-width: 520px; width: 100%; background:#f5f7fb; border-radius:8px;" />
         <MudSpacer />
-        <MudMenu>
-            <ActivatorContent Context="notificationMenu">
-                <MudBadge Color="Color.Secondary"
-                          Visible="@(_unreadCount > 0)"
-                          Content="@_unreadCount.ToString()"
-                          Overlap="true">
-                    <MudIconButton Icon="@Icons.Material.Filled.Notifications"
-                                   Color="Color.Inherit"
-                                   OnClick="@(_ => notificationMenu.ToggleAsync())" />
-                </MudBadge>
-            </ActivatorContent>
-            <ChildContent>
-                @if (_notifications.Count == 0)
-                {
-                    <MudMenuItem Disabled="true">No notifications</MudMenuItem>
-                }
-                else
-                {
-                    @foreach (var notification in _notifications.Take(8))
-                    {
-                        <MudMenuItem OnClick="@(_ => OpenNotificationAsync(notification))">
-                            <div class="notification-item">
-                                <div class="notification-title">@(notification.ShortText ?? notification.Type)</div>
-                                <div class="notification-body">@notification.LongText</div>
-                                <div class="notification-time">@notification.CreatedDate?.ToString("yyyy-MM-dd HH:mm")</div>
-                            </div>
-                        </MudMenuItem>
-                    }
+        <div class="notification-wrapper">
+            <MudBadge Color="Color.Secondary"
+                      Visible="@(_unreadCount > 0)"
+                      Content="@_unreadCount.ToString()"
+                      Overlap="true">
+                <MudIconButton Icon="@(_unreadCount > 0 ? Icons.Material.Outlined.NotificationsActive : Icons.Material.Outlined.Notifications)"
+                               Color="Color.Inherit"
+                               OnClick="@(_ => ToggleNotificationPopover())" />
+            </MudBadge>
 
-                    @if (_unreadCount > 0)
-                    {
-                        <MudDivider />
-                        <MudMenuItem OnClick="@(_ => MarkAllSeenAsync())">Mark all as read</MudMenuItem>
-                    }
-                }
-            </ChildContent>
-        </MudMenu>
+            <MudPopover Open="_notificationPopoverOpen"
+                        AnchorOrigin="Origin.BottomRight"
+                        TransformOrigin="Origin.TopRight"
+                        Class="notification-popover">
+                <MudPaper Elevation="4" Class="notification-panel">
+                    <div class="notification-panel-head">
+                        <div class="d-flex align-center gap-2">
+                            <MudText Typo="Typo.h6">Notifications</MudText>
+                            @if (_unreadCount > 0)
+                            {
+                                <MudChip T="string" Size="Size.Small" Color="Color.Error">@_unreadCount</MudChip>
+                            }
+                        </div>
+                        <div class="d-flex align-center gap-1">
+                            @if (_unreadCount > 0)
+                            {
+                                <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" OnClick="@(_ => MarkAllSeenAsync())">Mark all read</MudButton>
+                            }
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Color="Color.Primary" OnClick="@(_ => OpenNotificationList())">View All</MudButton>
+                        </div>
+                    </div>
+
+                    <div class="notification-list">
+                        @if (_notifications.Count == 0)
+                        {
+                            <div class="notification-empty">
+                                <MudIcon Icon="@Icons.Material.Filled.NotificationsOff" Color="Color.Error" Size="Size.Large" />
+                                <MudText Color="Color.Error">No notifications</MudText>
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (var notification in _notifications.Take(8))
+                            {
+                                <div class="notification-item" @onclick="@(() => OpenNotificationAsync(notification))">
+                                    <MudIcon Icon="@Icons.Material.Outlined.Info" Color="Color.Primary" Size="Size.Small" Class="mt-1" />
+                                    <div class="notification-item-copy">
+                                        <div class="notification-title">@(notification.ShortText ?? notification.Type ?? "Notification")</div>
+                                        <div class="notification-body">@notification.LongText</div>
+                                        <div class="notification-time">@notification.CreatedDate?.ToString("dd MMM yyyy HH:mm")</div>
+                                    </div>
+                                    @if (!notification.IsSeen)
+                                    {
+                                        <MudIcon Icon="@Icons.Material.Filled.MarkEmailUnread" Color="Color.Primary" Size="Size.Small" />
+                                    }
+                                </div>
+                            }
+                        }
+                    </div>
+                </MudPaper>
+            </MudPopover>
+            @if (_notificationPopoverOpen)
+            {
+                <div class="notification-backdrop" @onclick="CloseNotificationPopover"></div>
+            }
+        </div>
         <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        Color="Color.Inherit"
                        OnClick="@(_ => ToggleDarkMode())" />
@@ -100,11 +129,6 @@
                 </div>
             </div>
 
-            <div class="maker-approval">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.AddModerator" FullWidth="true" OnClick="@(_ => OpenParameter("maker"))">Maker</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.GppGood" FullWidth="true" OnClick="@(_ => OpenParameter("approval"))">Approval</MudButton>
-            </div>
-
             <MudDivider Class="my-3" />
 
             @foreach (var item in _menuItems)
@@ -118,27 +142,38 @@
         <MudContainer MaxWidth="MaxWidth.False" Class="pa-6">
             @if (TabService.Tabs.Count > 0)
             {
-                <MudTabs @bind-ActivePanelIndex="_selectedTabIndex" Elevation="0" Rounded="true" KeepPanelsAlive="true">
+                <MudTabs @bind-ActivePanelIndex="_selectedTabIndex" Elevation="0" Rounded="true" KeepPanelsAlive="true" Class="enterprise-tabs">
                     @foreach (var tab in TabService.Tabs)
                     {
-                        <MudTabPanel Text="@tab.Title">
-                            <div class="tab-toolbar">
-                                <MudIconButton Icon="@Icons.Material.Filled.Refresh" Size="Size.Small" OnClick="@(_ => RefreshTab(tab))" />
-                                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" OnClick="@(_ => CloseTab(tab))" />
-                            </div>
+                        <MudTabPanel @key="tab.Id">
+                            <TabContent>
+                                <div class="tab-header">
+                                    <MudIcon Icon="@MenuIconResolver.GetIcon(tab.Icon)" Color="Color.Primary" Size="Size.Small" />
+                                    <MudText Typo="Typo.body2">@tab.Title</MudText>
+                                    <span class="tab-header-actions" @onclick:stopPropagation="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                                       Size="Size.Small"
+                                                       OnClick="@(_ => RefreshTab(tab))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Size="Size.Small"
+                                                       OnClick="@(_ => CloseTab(tab))" />
+                                    </span>
+                                </div>
+                            </TabContent>
+                            <ChildContent>
+                                @{
+                                    var componentType = GetComponentType(tab);
+                                }
 
-                            @{
-                                var componentType = GetComponentType(tab);
-                            }
-
-                            @if (componentType != null)
-                            {
-                                <DynamicComponent Type="componentType" Parameters="tab.Parameters" @key="tab.RefreshKey" />
-                            }
-                            else
-                            {
-                                <MudAlert Severity="Severity.Info" Class="mt-4">This module is not implemented yet.</MudAlert>
-                            }
+                                @if (componentType != null)
+                                {
+                                    <DynamicComponent Type="componentType" Parameters="tab.Parameters" @key="tab.RefreshKey" />
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Info" Class="mt-4">This module is not implemented yet.</MudAlert>
+                                }
+                            </ChildContent>
                         </MudTabPanel>
                     }
                 </MudTabs>
@@ -156,9 +191,10 @@
     private const string DashboardComponent = "__PROJECT__.Shared.Pages.Dashboard, __PROJECT__.Shared";
     private const string ProfileComponent = "__PROJECT__.Shared.Pages.Profile, __PROJECT__.Shared";
     private const string ChangePasswordComponent = "__PROJECT__.Shared.Pages.ChangePassword, __PROJECT__.Shared";
-    private const string ParameterComponent = "__PROJECT__.Shared.Pages.Maintenance.Parameter.ParameterSystem, __PROJECT__.Shared";
+    private const string NotificationsComponent = "__PROJECT__.Shared.Pages.Notifications, __PROJECT__.Shared";
 
-    private bool _drawerOpen = true;
+    private bool _drawerOpen;
+    private bool _notificationPopoverOpen;
     private bool _isDarkMode;
     private int _unreadCount = 0;
     private int _selectedTabIndex;
@@ -217,7 +253,7 @@
 
         if (TabService.Tabs.Count == 0)
         {
-            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard");
+            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard", icon: "Home");
         }
 
         SyncSelectedTab();
@@ -262,8 +298,20 @@
         }
     }
 
+    private void ToggleNotificationPopover() => _notificationPopoverOpen = !_notificationPopoverOpen;
+
+    private void CloseNotificationPopover() => _notificationPopoverOpen = false;
+
+    private void OpenNotificationList()
+    {
+        _notificationPopoverOpen = false;
+        TabService.OpenTab("Notifications", NotificationsComponent, "/notifications", icon: "Notifications");
+    }
+
     private async Task OpenNotificationAsync(NotificationDto notification)
     {
+        _notificationPopoverOpen = false;
+
         if (!notification.IsSeen)
         {
             await NotificationApi.MarkSeenAsync(notification.Id);
@@ -347,25 +395,19 @@
             parameters["ReportId"] = item.MenuUrl;
         }
 
-        TabService.OpenTab(item.MenuName, item.ComponentType, item.MenuUrl, parameters.Count > 0 ? parameters : null);
+        TabService.OpenTab(
+            item.MenuName,
+            item.ComponentType,
+            item.MenuUrl,
+            parameters.Count > 0 ? parameters : null,
+            item.MenuIcon);
     }
 
     private void OpenProfile()
-        => TabService.OpenTab("Profile", ProfileComponent, "/profile");
+        => TabService.OpenTab("Profile", ProfileComponent, "/profile", icon: "Person");
 
     private void OpenChangePassword()
-        => TabService.OpenTab("Change Password", ChangePasswordComponent, "/change-password");
-
-    private void OpenParameter(string mode)
-    {
-        var parameters = new Dictionary<string, object> { ["Mode"] = mode };
-        var title = mode == "maker" ? "Parameter Maker" : "Parameter Approval";
-        var url = mode == "maker"
-            ? "/dashboard/maintenance/parameter-system/maker"
-            : "/dashboard/maintenance/parameter-system/approval";
-
-        TabService.OpenTab(title, ParameterComponent, url, parameters);
-    }
+        => TabService.OpenTab("Change Password", ChangePasswordComponent, "/change-password", icon: "Lock");
 
     private void RefreshTab(AppTabDto tab) => TabService.RefreshTab(tab);
 
@@ -376,7 +418,7 @@
 
         if (TempDataNeedsDashboard(active, tab))
         {
-            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard");
+            TabService.OpenTab("Dashboard", DashboardComponent, "/dashboard", icon: "Home");
         }
     }
 

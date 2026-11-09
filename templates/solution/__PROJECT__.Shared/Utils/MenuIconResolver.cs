@@ -6,6 +6,10 @@ public static class MenuIconResolver
 {
     public static string GetIcon(string? iconName) => iconName switch
     {
+        "Home" => Icons.Material.Filled.Home,
+        "Person" => Icons.Material.Filled.Person,
+        "Lock" => Icons.Material.Filled.Lock,
+        "Notifications" => Icons.Material.Filled.Notifications,
         "Settings" => Icons.Material.Filled.Settings,
         "EmojiPeople" => Icons.Material.Filled.EmojiPeople,
         "Groups" => Icons.Material.Filled.Groups,

@@ -8,7 +8,12 @@ public class TabStateService
     public AppTabDto? ActiveTab { get; private set; }
     public event Action? OnTabsChanged;
 
-    public void OpenTab(string title, string? componentType, string? url, Dictionary<string, object>? parameters = null)
+    public void OpenTab(
+        string title,
+        string? componentType,
+        string? url,
+        Dictionary<string, object>? parameters = null,
+        string? icon = null)
     {
         var existing = Tabs.FirstOrDefault(t => t.ComponentType == componentType && t.Url == url);
         if (existing != null)
@@ -23,6 +28,7 @@ public class TabStateService
             Title = title,
             ComponentType = componentType,
             Url = url,
+            Icon = icon,
             Parameters = parameters,
         };
 

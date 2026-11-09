@@ -4,6 +4,7 @@ obj/
 *.user
 *.suo
 appsettings.Development.json
+!**/wwwroot/appsettings.Development.json
 appsettings.*.local.json
 wwwroot/exports/
 logs/

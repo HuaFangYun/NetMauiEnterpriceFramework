@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+using Microsoft.Extensions.Configuration;
 using MudBlazor;
 using MudBlazor.Services;
 using __PROJECT__.Shared.Handlers;
@@ -13,7 +14,7 @@ var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"] ?? "https://localhost:7143";
+var apiBaseUrl = await ResolveApiBaseUrlAsync(builder.Configuration, builder.HostEnvironment);
 
 builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl) });
 builder.Services.AddMudServices(config =>
@@ -50,3 +51,43 @@ builder.Services.AddHttpClient("ApiClient", client => client.BaseAddress = new U
     .AddHttpMessageHandler<AuthenticatingHttpHandler>();
 
 await builder.Build().RunAsync();
+
+static async Task<string> ResolveApiBaseUrlAsync(
+    IConfiguration configuration,
+    IWebAssemblyHostEnvironment environment)
+{
+    var configuredUrl = (configuration["ApiBaseUrl"] ?? "https://localhost:7143").TrimEnd('/');
+    if (!environment.IsDevelopment())
+    {
+        return configuredUrl;
+    }
+
+    var fallbackUrls = configuration.GetSection("ApiFallbackUrls").Get<string[]>() ?? Array.Empty<string>();
+    var useHttps = environment.BaseAddress.StartsWith("https://", StringComparison.OrdinalIgnoreCase);
+    var candidates = new[] { configuredUrl }
+        .Concat(fallbackUrls)
+        .Select(url => url.Trim().TrimEnd('/'))
+        .Where(url => Uri.TryCreate(url, UriKind.Absolute, out var uri)
+                      && (!useHttps || uri.Scheme == Uri.UriSchemeHttps))
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    using var client = new HttpClient { Timeout = TimeSpan.FromSeconds(2) };
+    foreach (var candidate in candidates)
+    {
+        try
+        {
+            using var response = await client.GetAsync($"{candidate}/health");
+            if (response.IsSuccessStatusCode)
+            {
+                return candidate;
+            }
+        }
+        catch
+        {
+            // Try the next local API address.
+        }
+    }
+
+    return configuredUrl;
+}

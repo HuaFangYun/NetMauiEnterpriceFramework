@@ -214,6 +214,7 @@ if (app.Environment.IsDevelopment())
     app.UseHangfireDashboard();
 }
 
+app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapHub<UserHub>("/userHub");
 app.MapControllers();
 app.Run();

@@ -22,4 +22,31 @@
     <ProjectReference Include="..\__PROJECT__.Shared\__PROJECT__.Shared.csproj" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <ApiLaunchSettingsPath>..\__PROJECT__.Api\Properties\launchSettings.json</ApiLaunchSettingsPath>
+    <ApiDebugSettingsPath>$(MSBuildProjectDirectory)\wwwroot\appsettings.Development.json</ApiDebugSettingsPath>
+  </PropertyGroup>
+
+  <Target Name="GenerateApiDebugSettings"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(Configuration)' == 'Debug' And Exists('$(ApiLaunchSettingsPath)')">
+    <ReadLinesFromFile File="$(ApiLaunchSettingsPath)">
+      <Output TaskParameter="Lines" ItemName="_ApiLaunchSettingsLines" />
+    </ReadLinesFromFile>
+    <ItemGroup>
+      <_ApiSslPortLine Include="@(_ApiLaunchSettingsLines)"
+                       Condition="$([System.String]::Copy('%(Identity)').Contains('sslPort'))" />
+    </ItemGroup>
+    <PropertyGroup>
+      <_ApiSslPortText>@(_ApiSslPortLine)</_ApiSslPortText>
+      <_ApiSslPort>$([System.Text.RegularExpressions.Regex]::Match($(_ApiSslPortText), '\d+').Value)</_ApiSslPort>
+      <_ApiDebugBaseUrl>https://localhost:7143</_ApiDebugBaseUrl>
+      <_ApiDebugBaseUrl Condition="'$(_ApiSslPort)' != ''">https://localhost:$(_ApiSslPort)</_ApiDebugBaseUrl>
+    </PropertyGroup>
+    <WriteLinesToFile File="$(ApiDebugSettingsPath)"
+                      Lines="{&quot;ApiBaseUrl&quot;:&quot;$(_ApiDebugBaseUrl)&quot;,&quot;ApiFallbackUrls&quot;:[&quot;https://localhost:7143&quot;,&quot;http://localhost:7142&quot;]}"
+                      Overwrite="true"
+                      WriteOnlyWhenDifferent="true" />
+  </Target>
+
 </Project>
