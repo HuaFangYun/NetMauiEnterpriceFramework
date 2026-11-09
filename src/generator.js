@@ -75,6 +75,40 @@ async function replaceTokensInTree(root, tokens) {
   }
 }
 
+async function writeDevelopmentSettings(spec, outputDir) {
+  const apiDir = path.join(outputDir, `${spec.projectName}.Api`);
+  const quote = (value) => `"${String(value).replace(/"/g, '""')}"`;
+  const connection = (database) =>
+    `Server=${spec.server};Database=${database};User Id=${spec.dbUser};Password=${quote(spec.dbPassword)};TrustServerCertificate=True;Encrypt=False`;
+
+  const settings = {
+    ConnectionStrings: {
+      DefaultConnection: connection(spec.dbName),
+      AuditLogConnection: connection(spec.auditDbName),
+    },
+    Seed: {
+      Enabled: true,
+      AdminUser: spec.adminUser,
+      AdminPassword: spec.adminPassword,
+      AdminName: spec.adminName,
+      AdminEmail: spec.adminEmail,
+      BranchCode: spec.branchCode,
+    },
+    Logging: {
+      LogLevel: {
+        Default: 'Information',
+        'Microsoft.AspNetCore': 'Warning',
+      },
+    },
+  };
+
+  await fs.writeFile(
+    path.join(apiDir, 'appsettings.Development.json'),
+    `${JSON.stringify(settings, null, 2)}\n`,
+    'utf8'
+  );
+}
+
 async function copyLogo(spec, outputDir) {
   if (!spec.logoPath) return;
 
@@ -351,6 +385,7 @@ async function generate(spec, args) {
   console.log(pc.gray('  template     -> copied'));
 
   await replaceTokensInTree(outputDir, buildTokens(spec));
+  await writeDevelopmentSettings(spec, outputDir);
   console.log(pc.gray('  tokens       -> replaced'));
 
   if (!spec.includeMaui) {
