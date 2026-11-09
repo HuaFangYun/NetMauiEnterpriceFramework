@@ -28,7 +28,7 @@ BEGIN
     DECLARE @sql nvarchar(max) = N'
         SELECT ug.user_id AS UserId, u.full_name AS FullName, ug.group_id AS GroupId, g.group_name AS GroupName,
                ug.can_add_edit AS CanAddEdit, ug.can_delete AS CanDelete, ug.can_read_only AS CanReadOnly,
-               ug.responsible_to_user_id AS ResponsibleToUserId, ug.is_active AS IsActive
+               ug.is_active AS IsActive
         FROM dbo.um_user_group ug
         LEFT JOIN dbo.um_user_app u ON u.user_id = ug.user_id
         LEFT JOIN dbo.um_group_app g ON g.group_id = ug.group_id

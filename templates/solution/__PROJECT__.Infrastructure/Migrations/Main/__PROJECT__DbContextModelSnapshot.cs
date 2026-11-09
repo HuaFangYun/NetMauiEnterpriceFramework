@@ -1721,10 +1721,6 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                         .HasColumnType("datetime2")
                         .HasColumnName("modified_date");
 
-                    b.Property<string>("responsible_to_user_id")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
                     b.Property<int?>("statusApproval")
                         .HasColumnType("int")
                         .HasColumnName("status_approval");

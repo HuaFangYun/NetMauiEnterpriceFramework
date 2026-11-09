@@ -9,7 +9,6 @@ public class RoleListItemDto
     public bool CanAddEdit { get; set; }
     public bool CanDelete { get; set; }
     public bool CanReadOnly { get; set; }
-    public string? ResponsibleToUserId { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -20,6 +19,5 @@ public class RoleEditDto
     public bool CanAddEdit { get; set; }
     public bool CanDelete { get; set; }
     public bool CanReadOnly { get; set; }
-    public string? ResponsibleToUserId { get; set; }
     public bool IsActive { get; set; } = true;
 }

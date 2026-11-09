@@ -42,7 +42,6 @@ public class RoleManagementService : IRoleManagementService
                         CanAddEdit = ug.can_add_edit,
                         CanDelete = ug.can_delete,
                         CanReadOnly = ug.can_read_only,
-                        ResponsibleToUserId = ug.responsible_to_user_id,
                         IsActive = ug.isActive == true,
                     };
 
@@ -84,7 +83,6 @@ public class RoleManagementService : IRoleManagementService
             CanAddEdit = role.can_add_edit,
             CanDelete = role.can_delete,
             CanReadOnly = role.can_read_only,
-            ResponsibleToUserId = role.responsible_to_user_id,
             IsActive = role.isActive == true,
         };
     }
@@ -194,7 +192,6 @@ public class RoleManagementService : IRoleManagementService
         ["can_add_edit"] = dto.CanAddEdit ? "true" : "false",
         ["can_delete"] = dto.CanDelete ? "true" : "false",
         ["can_read_only"] = dto.CanReadOnly ? "true" : "false",
-        ["responsible_to_user_id"] = dto.ResponsibleToUserId,
         ["is_active"] = dto.IsActive ? "true" : "false",
     };
 

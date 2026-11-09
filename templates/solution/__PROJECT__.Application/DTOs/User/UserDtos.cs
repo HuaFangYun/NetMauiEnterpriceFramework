@@ -23,7 +23,6 @@ public class UserEditDto
     public string? PhoneNumber { get; set; }
     public string? GenderId { get; set; }
     public string? Password { get; set; }
-    public string? GroupId { get; set; }
     public bool IsActive { get; set; } = true;
 }
 

@@ -22,6 +22,7 @@ public class GroupApprovalListItemDto
     public string ApprovalType { get; set; } = string.Empty;
     public string? RequesterFullName { get; set; }
     public DateTime? CreatedDate { get; set; }
+    public int SelectedAction { get; set; } = 2;
 }
 
 public class RoleApprovalListItemDto
@@ -37,6 +38,7 @@ public class RoleApprovalListItemDto
     public string ApprovalType { get; set; } = string.Empty;
     public string? RequesterFullName { get; set; }
     public DateTime? CreatedDate { get; set; }
+    public int SelectedAction { get; set; } = 2;
 }
 
 public class MenuApprovalListItemDto

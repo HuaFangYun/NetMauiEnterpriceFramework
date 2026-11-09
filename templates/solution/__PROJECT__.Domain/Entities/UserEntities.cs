@@ -38,9 +38,6 @@ public partial class um_user_group : BaseEntity
     public bool can_delete { get; set; }
 
     public bool can_read_only { get; set; }
-
-    [StringLength(255)]
-    public string? responsible_to_user_id { get; set; }
 }
 
 public partial class um_group_app : BaseEntity

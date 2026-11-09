@@ -25,7 +25,6 @@ BEGIN
                MAX(CASE WHEN d.column_name = N'can_add_edit' THEN d.value END) AS CanAddEdit,
                MAX(CASE WHEN d.column_name = N'can_delete' THEN d.value END) AS CanDelete,
                MAX(CASE WHEN d.column_name = N'can_read_only' THEN d.value END) AS CanReadOnly,
-               MAX(CASE WHEN d.column_name = N'responsible_to_user_id' THEN d.value END) AS ResponsibleToUserId,
                t.type AS ApprovalType, t.created_by AS CreatedBy, t.created_date AS CreatedDate
         FROM dbo.tb_parameter_sytem_temporary t
         JOIN dbo.tb_parameter_sytem_temporary_detail d ON d.tb_parameter_sytem_temporary_id = t.id
@@ -46,7 +45,6 @@ BEGIN
                    MAX(CASE WHEN d.column_name = N''can_add_edit'' THEN d.value END) AS CanAddEdit,
                    MAX(CASE WHEN d.column_name = N''can_delete'' THEN d.value END) AS CanDelete,
                    MAX(CASE WHEN d.column_name = N''can_read_only'' THEN d.value END) AS CanReadOnly,
-                   MAX(CASE WHEN d.column_name = N''responsible_to_user_id'' THEN d.value END) AS ResponsibleToUserId,
                    t.type AS ApprovalType, t.created_by AS CreatedBy, t.created_date AS CreatedDate
             FROM dbo.tb_parameter_sytem_temporary t
             JOIN dbo.tb_parameter_sytem_temporary_detail d ON d.tb_parameter_sytem_temporary_id = t.id
@@ -54,7 +52,7 @@ BEGIN
             GROUP BY t.id, t.type, t.created_by, t.created_date
         )
         SELECT c.Id, c.UserId, u.full_name AS FullName, c.GroupId, g.group_name AS GroupName,
-               c.CanAddEdit, c.CanDelete, c.CanReadOnly, c.ResponsibleToUserId,
+               c.CanAddEdit, c.CanDelete, c.CanReadOnly,
                c.ApprovalType, u2.full_name AS RequesterFullName, c.CreatedDate
         FROM cte c
         LEFT JOIN dbo.um_user_app u ON u.user_id = c.UserId

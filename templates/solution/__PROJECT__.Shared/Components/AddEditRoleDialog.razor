@@ -23,13 +23,16 @@
                     }
                 </MudSelect>
             </MudItem>
-            <MudItem xs="12" md="6">
-                <MudTextField @bind-Value="_model.ResponsibleToUserId" Label="Responsible To (User ID)" Variant="Variant.Outlined" />
-            </MudItem>
-            <MudItem xs="12" md="6" Class="d-flex flex-column">
+            <MudItem xs="12" Class="d-flex align-center">
                 <MudCheckBox T="bool" @bind-Value="_model.CanAddEdit" Color="Color.Primary">Can Add / Edit</MudCheckBox>
+            </MudItem>
+            <MudItem xs="12" Class="d-flex align-center">
                 <MudCheckBox T="bool" @bind-Value="_model.CanDelete" Color="Color.Primary">Can Delete</MudCheckBox>
+            </MudItem>
+            <MudItem xs="12" Class="d-flex align-center">
                 <MudCheckBox T="bool" @bind-Value="_model.CanReadOnly" Color="Color.Primary">Read Only</MudCheckBox>
+            </MudItem>
+            <MudItem xs="12" Class="d-flex align-center">
                 <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
             </MudItem>
         </MudGrid>
@@ -71,7 +74,6 @@
                 CanAddEdit = Role.CanAddEdit,
                 CanDelete = Role.CanDelete,
                 CanReadOnly = Role.CanReadOnly,
-                ResponsibleToUserId = Role.ResponsibleToUserId,
                 IsActive = Role.IsActive,
             };
         }

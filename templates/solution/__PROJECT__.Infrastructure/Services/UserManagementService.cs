@@ -141,8 +141,6 @@ public class UserManagementService : IUserManagementService
             return null;
         }
 
-        var userGroup = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == userId && e.isDeleted != true);
-
         return new UserEditDto
         {
             UserId = user.user_id,
@@ -150,7 +148,6 @@ public class UserManagementService : IUserManagementService
             Email = user.email,
             PhoneNumber = user.phone_number,
             GenderId = user.gender_id,
-            GroupId = userGroup?.group_id,
             IsActive = user.isActive == true,
         };
     }
@@ -170,12 +167,6 @@ public class UserManagementService : IUserManagementService
                 return Fail("User ID already exists.");
             }
 
-            if (string.IsNullOrWhiteSpace(dto.GroupId)
-                || !await _context.um_group_app.AnyAsync(e => e.group_id == dto.GroupId && e.isDeleted != true))
-            {
-                return Fail("Group is invalid.");
-            }
-
             if (await _context.temp_user_app_pending.AnyAsync(e => e.user_id == dto.UserId))
             {
                 return Fail("User already has a pending request.");
@@ -191,7 +182,6 @@ public class UserManagementService : IUserManagementService
                 email = dto.Email,
                 phone_number = dto.PhoneNumber,
                 gender_id = dto.GenderId,
-                group_id = dto.GroupId,
                 password = _passwordHasher.HashPassword(dto.Password),
                 approval_type_id = Const.ApprovalType.ADD,
                 is_active = dto.IsActive,
@@ -219,12 +209,6 @@ public class UserManagementService : IUserManagementService
                 return Fail("User not found.");
             }
 
-            if (string.IsNullOrWhiteSpace(dto.GroupId)
-                || !await _context.um_group_app.AnyAsync(e => e.group_id == dto.GroupId && e.isDeleted != true))
-            {
-                return Fail("Group is invalid.");
-            }
-
             if (await _context.temp_user_app_pending.AnyAsync(e => e.user_id == userId))
             {
                 return Fail("User already has a pending request.");
@@ -240,7 +224,6 @@ public class UserManagementService : IUserManagementService
                 email = dto.Email,
                 phone_number = dto.PhoneNumber,
                 gender_id = dto.GenderId,
-                group_id = dto.GroupId,
                 password = string.IsNullOrWhiteSpace(dto.Password) ? null : _passwordHasher.HashPassword(dto.Password),
                 approval_type_id = Const.ApprovalType.MODIFIED,
                 is_active = dto.IsActive,

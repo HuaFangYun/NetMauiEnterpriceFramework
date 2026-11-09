@@ -94,11 +94,6 @@ public class ApprovalService : IApprovalService
                 return Fail("Password payload is missing.");
             }
 
-            if (string.IsNullOrWhiteSpace(pending.group_id)
-                || !await _context.um_group_app.AnyAsync(e => e.group_id == pending.group_id && e.isDeleted != true))
-            {
-                return Fail("Group not found.");
-            }
         }
 
         await using var transaction = await _context.Database.BeginTransactionAsync();
@@ -528,7 +523,6 @@ public class ApprovalService : IApprovalService
                 role.can_add_edit = ParseBool(Get(values, "can_add_edit"));
                 role.can_delete = ParseBool(Get(values, "can_delete"));
                 role.can_read_only = ParseBool(Get(values, "can_read_only"));
-                role.responsible_to_user_id = Get(values, "responsible_to_user_id");
                 role.statusApproval = Const.StatusApproval.APPROVED;
                 role.isActive = Get(values, "is_active") == null || ParseBool(Get(values, "is_active"));
                 role.isDeleted = false;
@@ -794,6 +788,11 @@ public class ApprovalService : IApprovalService
 
     private async Task EnsureUserRoleAsync(temp_user_app_pending pending, DateTime now, bool resetPermissions)
     {
+        if (string.IsNullOrWhiteSpace(pending.group_id))
+        {
+            return;
+        }
+
         var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
         if (role == null)
         {

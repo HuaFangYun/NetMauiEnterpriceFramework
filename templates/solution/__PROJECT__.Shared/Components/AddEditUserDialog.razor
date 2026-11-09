@@ -50,18 +50,6 @@
                 @if (!IsEdit)
                 {
                     <MudItem xs="12" sm="6">
-                        <MudSelect T="string"
-                                   @bind-Value="_model.GroupId"
-                                   Label="Role / Group"
-                                   Variant="Variant.Text"
-                                   Required="true">
-                            @foreach (var group in _groups)
-                            {
-                                <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
-                            }
-                        </MudSelect>
-                    </MudItem>
-                    <MudItem xs="12" sm="6">
                         <MudTextField @bind-Value="_model.Password"
                                       Label="Password"
                                       Variant="Variant.Text"
@@ -92,7 +80,6 @@
 
     private MudForm? _form;
     private UserEditDto _model = new();
-    private List<DropdownItemDto> _groups = new();
     private List<DropdownItemDto> _genders = new();
     private bool _saving;
 
@@ -101,7 +88,6 @@
 
     protected override async Task OnInitializedAsync()
     {
-        _groups = await SettingApi.GetGroupsAsync();
         _genders = await SettingApi.GetGendersAsync();
 
         if (User != null)
@@ -113,7 +99,6 @@
                 Email = User.Email,
                 PhoneNumber = User.PhoneNumber,
                 GenderId = User.GenderId,
-                GroupId = User.GroupId,
                 IsActive = User.IsActive,
             };
         }
@@ -121,9 +106,9 @@
 
     private async Task SubmitAsync()
     {
-        if (string.IsNullOrWhiteSpace(_model.UserId) || string.IsNullOrWhiteSpace(_model.GroupId))
+        if (string.IsNullOrWhiteSpace(_model.UserId))
         {
-            Snackbar.Add("User ID and role/group are required.", Severity.Warning);
+            Snackbar.Add("User ID is required.", Severity.Warning);
             return;
         }
 
