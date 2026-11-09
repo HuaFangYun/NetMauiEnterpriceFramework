@@ -142,14 +142,14 @@ public class NotificationService : INotificationService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

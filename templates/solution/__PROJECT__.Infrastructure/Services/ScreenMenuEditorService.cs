@@ -131,7 +131,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
             }
 
             var existing = await _context.tb_screen_menu.FirstOrDefaultAsync(e => e.id == dto.Id);
-            var type = existing == null ? BCIConst.ApprovalType.ADD : BCIConst.ApprovalType.MODIFIED;
+            var type = existing == null ? Const.ApprovalType.ADD : Const.ApprovalType.MODIFIED;
             if (await HasPendingAsync(dto.Id))
             {
                 return Fail("Screen menu already has a pending request.");
@@ -167,7 +167,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
             if (dto.Child != null && !string.IsNullOrWhiteSpace(dto.Child.ScreenMenuChildId))
             {
                 var childExists = await _context.tb_screen_menu_child.AnyAsync(e => e.screen_menu_child_id == dto.Child.ScreenMenuChildId);
-                values["__child_type"] = childExists ? BCIConst.ApprovalType.MODIFIED : BCIConst.ApprovalType.ADD;
+                values["__child_type"] = childExists ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
                 void AddChild(string key, string? value) => values[$"child.{key}"] = value;
                 AddChild("screen_menu_child_id", dto.Child.ScreenMenuChildId);
                 AddChild("description", dto.Child.Description);
@@ -185,7 +185,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
             if (dto.Import != null && !string.IsNullOrWhiteSpace(dto.Import.ScreenMenuImportExcelProcessId))
             {
                 var importExists = await _context.tb_screen_menu_import_excel_process.AnyAsync(e => e.screen_menu_import_excel_process_id == dto.Import.ScreenMenuImportExcelProcessId);
-                values["__import_type"] = importExists ? BCIConst.ApprovalType.MODIFIED : BCIConst.ApprovalType.ADD;
+                values["__import_type"] = importExists ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
                 void AddImport(string key, string? value) => values[$"import.{key}"] = value;
                 AddImport("screen_menu_import_excel_process_id", dto.Import.ScreenMenuImportExcelProcessId);
                 AddImport("description", dto.Import.Description);
@@ -238,14 +238,14 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

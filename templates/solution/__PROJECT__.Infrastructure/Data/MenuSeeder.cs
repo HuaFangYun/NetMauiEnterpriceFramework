@@ -90,7 +90,7 @@ public static class MenuSeeder
                 menu_icon = item.Icon,
                 order_seq = item.Order,
                 component_type = item.Component,
-                statusApproval = BCIConst.StatusApproval.APPROVED,
+                statusApproval = Const.StatusApproval.APPROVED,
                 isActive = true,
                 isDeleted = false,
                 isLocked = false,
@@ -109,9 +109,9 @@ public static class MenuSeeder
         {
             await context.um_group_menu.AddAsync(new um_group_menu
             {
-                group_id = BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
+                group_id = Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
                 menu_id = menu.id,
-                statusApproval = BCIConst.StatusApproval.APPROVED,
+                statusApproval = Const.StatusApproval.APPROVED,
                 isActive = true,
                 isDeleted = false,
                 isLocked = false,

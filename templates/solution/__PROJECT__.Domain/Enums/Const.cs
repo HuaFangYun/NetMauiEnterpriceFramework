@@ -1,6 +1,6 @@
 namespace __PROJECT__.Domain.Enums;
 
-public static class BCIConst
+public static class Const
 {
     public const string SUCCESS_CODE = "00";
     public const string DATA_NOT_FOUND_CODE = "98";

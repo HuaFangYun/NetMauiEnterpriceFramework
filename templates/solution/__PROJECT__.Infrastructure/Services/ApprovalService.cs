@@ -87,7 +87,7 @@ public class ApprovalService : IApprovalService
             return Fail("Pending request not found.");
         }
 
-        if (pending.approval_type_id == BCIConst.ApprovalType.ADD)
+        if (pending.approval_type_id == Const.ApprovalType.ADD)
         {
             if (string.IsNullOrWhiteSpace(pending.password))
             {
@@ -107,7 +107,7 @@ public class ApprovalService : IApprovalService
             var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
             var now = DateTime.Now;
 
-            if (pending.approval_type_id == BCIConst.ApprovalType.ADD)
+            if (pending.approval_type_id == Const.ApprovalType.ADD)
             {
                 if (user != null && user.isDeleted != true)
                 {
@@ -128,7 +128,7 @@ public class ApprovalService : IApprovalService
                 ApplyUserFields(user, pending);
                 user.password = pending.password;
                 user.last_password_change_date = now;
-                user.statusApproval = BCIConst.StatusApproval.APPROVED;
+                user.statusApproval = Const.StatusApproval.APPROVED;
                 user.isActive = pending.is_active != false;
                 user.isDeleted = false;
                 user.deletedBy = null;
@@ -139,7 +139,7 @@ public class ApprovalService : IApprovalService
                 await EnsureUserRoleAsync(pending, now, resetPermissions: true);
                 await EnsureUserFlagAsync(pending.user_id, now, isNew: true, passwordChanged: true);
             }
-            else if (pending.approval_type_id == BCIConst.ApprovalType.MODIFIED)
+            else if (pending.approval_type_id == Const.ApprovalType.MODIFIED)
             {
                 if (user == null || user.isDeleted == true)
                 {
@@ -153,7 +153,7 @@ public class ApprovalService : IApprovalService
                     user.last_password_change_date = now;
                 }
 
-                user.statusApproval = BCIConst.StatusApproval.APPROVED;
+                user.statusApproval = Const.StatusApproval.APPROVED;
                 user.isActive = pending.is_active != false;
                 user.approvedBy = Actor;
                 user.approvedDate = now;
@@ -163,7 +163,7 @@ public class ApprovalService : IApprovalService
                 await EnsureUserRoleAsync(pending, now, resetPermissions: false);
                 await EnsureUserFlagAsync(pending.user_id, now, isNew: false, passwordChanged: !string.IsNullOrWhiteSpace(pending.password));
             }
-            else if (pending.approval_type_id == BCIConst.ApprovalType.DELETE)
+            else if (pending.approval_type_id == Const.ApprovalType.DELETE)
             {
                 if (user == null || user.isDeleted == true)
                 {
@@ -174,7 +174,7 @@ public class ApprovalService : IApprovalService
                 user.isDeleted = true;
                 user.deletedBy = pending.created_by;
                 user.deletedDate = now;
-                user.statusApproval = BCIConst.StatusApproval.APPROVED;
+                user.statusApproval = Const.StatusApproval.APPROVED;
                 user.approvedBy = Actor;
                 user.approvedDate = now;
 
@@ -284,7 +284,7 @@ public class ApprovalService : IApprovalService
             var group = await _context.um_group_app.FirstOrDefaultAsync(e => e.group_id == pending.group_id);
             var now = DateTime.Now;
 
-            if (pending.approval_type_id == BCIConst.ApprovalType.ADD)
+            if (pending.approval_type_id == Const.ApprovalType.ADD)
             {
                 if (group != null && group.isDeleted != true)
                 {
@@ -303,7 +303,7 @@ public class ApprovalService : IApprovalService
                 }
 
                 group.group_name = pending.group_name;
-                group.statusApproval = BCIConst.StatusApproval.APPROVED;
+                group.statusApproval = Const.StatusApproval.APPROVED;
                 group.isActive = pending.is_active != false;
                 group.isDeleted = false;
                 group.deletedBy = null;
@@ -311,7 +311,7 @@ public class ApprovalService : IApprovalService
                 group.approvedBy = Actor;
                 group.approvedDate = now;
             }
-            else if (pending.approval_type_id == BCIConst.ApprovalType.MODIFIED)
+            else if (pending.approval_type_id == Const.ApprovalType.MODIFIED)
             {
                 if (group == null || group.isDeleted == true)
                 {
@@ -320,20 +320,20 @@ public class ApprovalService : IApprovalService
 
                 group.group_name = pending.group_name;
                 group.isActive = pending.is_active != false;
-                group.statusApproval = BCIConst.StatusApproval.APPROVED;
+                group.statusApproval = Const.StatusApproval.APPROVED;
                 group.modifiedBy = pending.created_by;
                 group.modifiedDate = pending.created_date;
                 group.approvedBy = Actor;
                 group.approvedDate = now;
             }
-            else if (pending.approval_type_id == BCIConst.ApprovalType.DELETE)
+            else if (pending.approval_type_id == Const.ApprovalType.DELETE)
             {
                 if (group == null || group.isDeleted == true)
                 {
                     return Fail("Group not found.");
                 }
 
-                if (group.group_id == BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
+                if (group.group_id == Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
                 {
                     return Fail("Administrator group cannot be deleted.");
                 }
@@ -347,7 +347,7 @@ public class ApprovalService : IApprovalService
                 group.isDeleted = true;
                 group.deletedBy = pending.created_by;
                 group.deletedDate = now;
-                group.statusApproval = BCIConst.StatusApproval.APPROVED;
+                group.statusApproval = Const.StatusApproval.APPROVED;
                 group.approvedBy = Actor;
                 group.approvedDate = now;
             }
@@ -392,9 +392,9 @@ public class ApprovalService : IApprovalService
 
         var rows = await _context.tb_parameter_sytem_temporary
             .Where(e => e.table_name == "um_user_group"
-                        && (e.type == BCIConst.ApprovalType.ADD
-                            || e.type == BCIConst.ApprovalType.MODIFIED
-                            || e.type == BCIConst.ApprovalType.DELETE))
+                        && (e.type == Const.ApprovalType.ADD
+                            || e.type == Const.ApprovalType.MODIFIED
+                            || e.type == Const.ApprovalType.DELETE))
             .OrderByDescending(e => e.created_date)
             .ToListAsync();
 
@@ -486,7 +486,7 @@ public class ApprovalService : IApprovalService
             var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == userId);
             var now = DateTime.Now;
 
-            if (temporary.type == BCIConst.ApprovalType.DELETE)
+            if (temporary.type == Const.ApprovalType.DELETE)
             {
                 if (role == null || role.isDeleted == true)
                 {
@@ -497,18 +497,18 @@ public class ApprovalService : IApprovalService
                 role.isDeleted = true;
                 role.deletedBy = temporary.created_by;
                 role.deletedDate = now;
-                role.statusApproval = BCIConst.StatusApproval.APPROVED;
+                role.statusApproval = Const.StatusApproval.APPROVED;
                 role.approvedBy = Actor;
                 role.approvedDate = now;
             }
-            else if (temporary.type == BCIConst.ApprovalType.ADD || temporary.type == BCIConst.ApprovalType.MODIFIED)
+            else if (temporary.type == Const.ApprovalType.ADD || temporary.type == Const.ApprovalType.MODIFIED)
             {
-                if (temporary.type == BCIConst.ApprovalType.ADD && role != null && role.isDeleted != true)
+                if (temporary.type == Const.ApprovalType.ADD && role != null && role.isDeleted != true)
                 {
                     return Fail("User already has a role.");
                 }
 
-                if (temporary.type == BCIConst.ApprovalType.MODIFIED && (role == null || role.isDeleted == true))
+                if (temporary.type == Const.ApprovalType.MODIFIED && (role == null || role.isDeleted == true))
                 {
                     return Fail("Role not found.");
                 }
@@ -529,7 +529,7 @@ public class ApprovalService : IApprovalService
                 role.can_delete = ParseBool(Get(values, "can_delete"));
                 role.can_read_only = ParseBool(Get(values, "can_read_only"));
                 role.responsible_to_user_id = Get(values, "responsible_to_user_id");
-                role.statusApproval = BCIConst.StatusApproval.APPROVED;
+                role.statusApproval = Const.StatusApproval.APPROVED;
                 role.isActive = Get(values, "is_active") == null || ParseBool(Get(values, "is_active"));
                 role.isDeleted = false;
                 role.deletedBy = null;
@@ -570,9 +570,9 @@ public class ApprovalService : IApprovalService
 
         var rows = await _context.tb_parameter_sytem_temporary
             .Where(e => e.table_name == "um_menu"
-                        && (e.type == BCIConst.ApprovalType.ADD
-                            || e.type == BCIConst.ApprovalType.MODIFIED
-                            || e.type == BCIConst.ApprovalType.DELETE))
+                        && (e.type == Const.ApprovalType.ADD
+                            || e.type == Const.ApprovalType.MODIFIED
+                            || e.type == Const.ApprovalType.DELETE))
             .OrderByDescending(e => e.created_date)
             .ToListAsync();
 
@@ -649,7 +649,7 @@ public class ApprovalService : IApprovalService
                 : await _context.um_menu.FirstOrDefaultAsync(e => e.menu_unique == menuUnique);
             var now = DateTime.Now;
 
-            if (temporary.type == BCIConst.ApprovalType.DELETE)
+            if (temporary.type == Const.ApprovalType.DELETE)
             {
                 if (menu == null || menu.isDeleted == true)
                 {
@@ -665,7 +665,7 @@ public class ApprovalService : IApprovalService
                 menu.isDeleted = true;
                 menu.deletedBy = temporary.created_by;
                 menu.deletedDate = now;
-                menu.statusApproval = BCIConst.StatusApproval.APPROVED;
+                menu.statusApproval = Const.StatusApproval.APPROVED;
                 menu.approvedBy = Actor;
                 menu.approvedDate = now;
 
@@ -678,14 +678,14 @@ public class ApprovalService : IApprovalService
                     assignment.deletedDate = now;
                 }
             }
-            else if (temporary.type == BCIConst.ApprovalType.ADD || temporary.type == BCIConst.ApprovalType.MODIFIED)
+            else if (temporary.type == Const.ApprovalType.ADD || temporary.type == Const.ApprovalType.MODIFIED)
             {
-                if (temporary.type == BCIConst.ApprovalType.ADD && menu != null && menu.isDeleted != true)
+                if (temporary.type == Const.ApprovalType.ADD && menu != null && menu.isDeleted != true)
                 {
                     return Fail("Menu unique already exists.");
                 }
 
-                if (temporary.type == BCIConst.ApprovalType.MODIFIED && (menu == null || menu.isDeleted == true))
+                if (temporary.type == Const.ApprovalType.MODIFIED && (menu == null || menu.isDeleted == true))
                 {
                     return Fail("Menu not found.");
                 }
@@ -738,7 +738,7 @@ public class ApprovalService : IApprovalService
                 menu.menu_icon = Get(values, "menu_icon");
                 menu.order_seq = ParseInt(Get(values, "order_seq"));
                 menu.component_type = Get(values, "component_type");
-                menu.statusApproval = BCIConst.StatusApproval.APPROVED;
+                menu.statusApproval = Const.StatusApproval.APPROVED;
                 menu.isActive = Get(values, "is_active") == null || ParseBool(Get(values, "is_active"));
                 menu.isDeleted = false;
                 menu.deletedBy = null;
@@ -815,7 +815,7 @@ public class ApprovalService : IApprovalService
             role.can_read_only = false;
         }
 
-        role.statusApproval = BCIConst.StatusApproval.APPROVED;
+        role.statusApproval = Const.StatusApproval.APPROVED;
         role.isActive = true;
         role.isDeleted = false;
         role.deletedBy = null;
@@ -954,23 +954,23 @@ public class ApprovalService : IApprovalService
 
     private static string TypeLabel(string? type) => type switch
     {
-        BCIConst.ApprovalType.ADD => "Add",
-        BCIConst.ApprovalType.MODIFIED => "Modify",
-        BCIConst.ApprovalType.DELETE => "Delete",
+        Const.ApprovalType.ADD => "Add",
+        Const.ApprovalType.MODIFIED => "Modify",
+        Const.ApprovalType.DELETE => "Delete",
         _ => type ?? string.Empty,
     };
 
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

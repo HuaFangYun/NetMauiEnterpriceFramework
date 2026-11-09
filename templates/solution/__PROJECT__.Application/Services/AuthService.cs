@@ -83,7 +83,7 @@ public class AuthService : IAuthService
             flag.failed_password_attempt_count = (flag.failed_password_attempt_count ?? 0) + 1;
             flag.failed_password_attempt_date = DateTime.Now;
 
-            var isAdmin = role == BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE;
+            var isAdmin = role == Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE;
             if (flag.failed_password_attempt_count >= 5 && !isAdmin)
             {
                 flag.is_locked = true;

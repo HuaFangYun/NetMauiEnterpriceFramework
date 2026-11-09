@@ -29,15 +29,15 @@ public static class DbInitializer
 
         var now = DateTime.Now;
         var adminGroup = await context.um_group_app
-            .FirstOrDefaultAsync(e => e.group_id == BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE, cancellationToken);
+            .FirstOrDefaultAsync(e => e.group_id == Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE, cancellationToken);
 
         if (adminGroup == null)
         {
             adminGroup = new um_group_app
             {
-                group_id = BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
+                group_id = Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
                 group_name = "Administrator",
-                statusApproval = BCIConst.StatusApproval.APPROVED,
+                statusApproval = Const.StatusApproval.APPROVED,
                 isActive = true,
                 isDeleted = false,
                 isLocked = false,
@@ -56,7 +56,7 @@ public static class DbInitializer
             email = adminEmail,
             kode_cabang = branchCode,
             last_password_change_date = now,
-            statusApproval = BCIConst.StatusApproval.APPROVED,
+            statusApproval = Const.StatusApproval.APPROVED,
             isActive = true,
             isDeleted = false,
             isLocked = false,
@@ -69,11 +69,11 @@ public static class DbInitializer
         await context.um_user_group.AddAsync(new um_user_group
         {
             user_id = adminUser,
-            group_id = BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
+            group_id = Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE,
             can_add_edit = true,
             can_delete = true,
             can_read_only = false,
-            statusApproval = BCIConst.StatusApproval.APPROVED,
+            statusApproval = Const.StatusApproval.APPROVED,
             isActive = true,
             isDeleted = false,
             isLocked = false,

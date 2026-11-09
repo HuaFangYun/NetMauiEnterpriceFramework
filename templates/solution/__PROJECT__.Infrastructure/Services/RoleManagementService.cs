@@ -119,7 +119,7 @@ public class RoleManagementService : IRoleManagementService
                 return Fail("Role already has a pending request.");
             }
 
-            await _staging.StageAsync("um_user_group", BCIConst.ApprovalType.ADD, BuildPayload(dto));
+            await _staging.StageAsync("um_user_group", Const.ApprovalType.ADD, BuildPayload(dto));
             return Success("Role creation request sent for approval.");
         }
         catch (Exception ex)
@@ -150,7 +150,7 @@ public class RoleManagementService : IRoleManagementService
             }
 
             dto.UserId = userId;
-            await _staging.StageAsync("um_user_group", BCIConst.ApprovalType.MODIFIED, BuildPayload(dto));
+            await _staging.StageAsync("um_user_group", Const.ApprovalType.MODIFIED, BuildPayload(dto));
             return Success("Role update request sent for approval.");
         }
         catch (Exception ex)
@@ -174,7 +174,7 @@ public class RoleManagementService : IRoleManagementService
                 return Fail("Role already has a pending request.");
             }
 
-            await _staging.StageAsync("um_user_group", BCIConst.ApprovalType.DELETE, new Dictionary<string, string?>
+            await _staging.StageAsync("um_user_group", Const.ApprovalType.DELETE, new Dictionary<string, string?>
             {
                 ["user_id"] = userId,
                 ["group_id"] = role.group_id,
@@ -201,14 +201,14 @@ public class RoleManagementService : IRoleManagementService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

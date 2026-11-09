@@ -102,7 +102,7 @@ public class GroupManagementService : IGroupManagementService
             {
                 group_id = dto.GroupId,
                 group_name = dto.GroupName ?? string.Empty,
-                approval_type_id = BCIConst.ApprovalType.ADD,
+                approval_type_id = Const.ApprovalType.ADD,
                 is_active = dto.IsActive,
                 created_by = actor,
                 created_date = now,
@@ -139,7 +139,7 @@ public class GroupManagementService : IGroupManagementService
             {
                 group_id = groupId,
                 group_name = dto.GroupName ?? string.Empty,
-                approval_type_id = BCIConst.ApprovalType.MODIFIED,
+                approval_type_id = Const.ApprovalType.MODIFIED,
                 is_active = dto.IsActive,
                 created_by = actor,
                 created_date = now,
@@ -164,7 +164,7 @@ public class GroupManagementService : IGroupManagementService
                 return Fail("Group not found.");
             }
 
-            if (groupId == BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
+            if (groupId == Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
             {
                 return Fail("Administrator group cannot be deleted.");
             }
@@ -186,7 +186,7 @@ public class GroupManagementService : IGroupManagementService
             {
                 group_id = groupId,
                 group_name = group.group_name ?? string.Empty,
-                approval_type_id = BCIConst.ApprovalType.DELETE,
+                approval_type_id = Const.ApprovalType.DELETE,
                 is_active = false,
                 created_by = actor,
                 created_date = now,
@@ -204,14 +204,14 @@ public class GroupManagementService : IGroupManagementService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

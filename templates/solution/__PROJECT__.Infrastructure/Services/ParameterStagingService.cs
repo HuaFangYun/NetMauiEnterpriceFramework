@@ -52,9 +52,9 @@ public class ParameterStagingService : IParameterStagingService
             join detail in _context.tb_parameter_sytem_temporary_detail
                 on temporary.id equals detail.tb_parameter_sytem_temporary_id
             where temporary.table_name == tableName
-                  && (temporary.type == BCIConst.ApprovalType.ADD
-                      || temporary.type == BCIConst.ApprovalType.MODIFIED
-                      || temporary.type == BCIConst.ApprovalType.DELETE)
+                  && (temporary.type == Const.ApprovalType.ADD
+                      || temporary.type == Const.ApprovalType.MODIFIED
+                      || temporary.type == Const.ApprovalType.DELETE)
                   && detail.column_name == keyColumn
                   && detail.value == keyValue
             select temporary.id).AnyAsync();

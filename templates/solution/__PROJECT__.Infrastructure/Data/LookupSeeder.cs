@@ -134,7 +134,7 @@ public static class LookupSeeder
                 files_upload_type_code = code,
                 files_upload_type_T24_code = GetString(item, "files_upload_type_T24_code"),
                 files_upload_type_name = GetString(item, "files_upload_type_name"),
-                statusApproval = BCIConst.StatusApproval.APPROVED,
+                statusApproval = Const.StatusApproval.APPROVED,
                 isActive = true,
                 isDeleted = false,
                 createdBy = "system",

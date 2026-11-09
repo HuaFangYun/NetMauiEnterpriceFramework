@@ -113,7 +113,7 @@ public class MenuManagementService : IMenuManagementService
                 return Fail("Menu already has a pending request.");
             }
 
-            await _staging.StageAsync("um_menu", BCIConst.ApprovalType.ADD, BuildPayload(dto));
+            await _staging.StageAsync("um_menu", Const.ApprovalType.ADD, BuildPayload(dto));
             return Success("Menu creation request sent for approval.");
         }
         catch (Exception ex)
@@ -159,7 +159,7 @@ public class MenuManagementService : IMenuManagementService
             }
 
             dto.Id = id;
-            await _staging.StageAsync("um_menu", BCIConst.ApprovalType.MODIFIED, BuildPayload(dto));
+            await _staging.StageAsync("um_menu", Const.ApprovalType.MODIFIED, BuildPayload(dto));
             return Success("Menu update request sent for approval.");
         }
         catch (Exception ex)
@@ -188,7 +188,7 @@ public class MenuManagementService : IMenuManagementService
                 return Fail("Menu already has a pending request.");
             }
 
-            await _staging.StageAsync("um_menu", BCIConst.ApprovalType.DELETE, new Dictionary<string, string?>
+            await _staging.StageAsync("um_menu", Const.ApprovalType.DELETE, new Dictionary<string, string?>
             {
                 ["id"] = menu.id.ToString(),
                 ["menu_unique"] = menu.menu_unique,
@@ -238,7 +238,7 @@ public class MenuManagementService : IMenuManagementService
         }
 
         return menus
-            .Where(e => e.ParentLevelId == BCIConst.ParentLevel.FIRST_PARENT && string.IsNullOrEmpty(e.MenuUniqueParent))
+            .Where(e => e.ParentLevelId == Const.ParentLevel.FIRST_PARENT && string.IsNullOrEmpty(e.MenuUniqueParent))
             .OrderBy(e => e.OrderSeq)
             .ToList();
     }
@@ -288,7 +288,7 @@ public class MenuManagementService : IMenuManagementService
                 }
             }
 
-            foreach (var root in allMenus.Where(e => e.parent_level_id == BCIConst.ParentLevel.FIRST_PARENT))
+            foreach (var root in allMenus.Where(e => e.parent_level_id == Const.ParentLevel.FIRST_PARENT))
             {
                 requestedIds.Add(root.id);
             }
@@ -305,7 +305,7 @@ public class MenuManagementService : IMenuManagementService
                 {
                     group_id = dto.GroupId,
                     menu_id = menuId,
-                    statusApproval = BCIConst.StatusApproval.APPROVED,
+                    statusApproval = Const.StatusApproval.APPROVED,
                     isActive = true,
                     isDeleted = false,
                     isLocked = false,
@@ -341,14 +341,14 @@ public class MenuManagementService : IMenuManagementService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

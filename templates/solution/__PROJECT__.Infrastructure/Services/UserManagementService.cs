@@ -149,7 +149,7 @@ public class UserManagementService : IUserManagementService
                 nomor_induk_karyawan = dto.NomorIndukKaryawan,
                 group_id = dto.GroupId,
                 password = _passwordHasher.HashPassword(dto.Password),
-                approval_type_id = BCIConst.ApprovalType.ADD,
+                approval_type_id = Const.ApprovalType.ADD,
                 is_active = dto.IsActive,
                 is_deleted = false,
                 created_by = actor,
@@ -200,7 +200,7 @@ public class UserManagementService : IUserManagementService
                 nomor_induk_karyawan = dto.NomorIndukKaryawan,
                 group_id = dto.GroupId,
                 password = string.IsNullOrWhiteSpace(dto.Password) ? null : _passwordHasher.HashPassword(dto.Password),
-                approval_type_id = BCIConst.ApprovalType.MODIFIED,
+                approval_type_id = Const.ApprovalType.MODIFIED,
                 is_active = dto.IsActive,
                 is_deleted = false,
                 created_by = actor,
@@ -245,7 +245,7 @@ public class UserManagementService : IUserManagementService
                 gender_id = user.gender_id,
                 nomor_induk_karyawan = user.nomor_induk_karyawan,
                 group_id = role?.group_id,
-                approval_type_id = BCIConst.ApprovalType.DELETE,
+                approval_type_id = Const.ApprovalType.DELETE,
                 is_active = false,
                 is_deleted = true,
                 created_by = actor,
@@ -308,14 +308,14 @@ public class UserManagementService : IUserManagementService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

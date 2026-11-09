@@ -230,7 +230,7 @@ public class ParameterEngineService : IParameterEngineService
                 ? await GetAsync(tableName, request.Key)
                 : null;
             var isEdit = existing != null;
-            var type = isEdit ? BCIConst.ApprovalType.MODIFIED : BCIConst.ApprovalType.ADD;
+            var type = isEdit ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
 
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             for (var index = 0; index < keyFields.Count; index++)
@@ -319,7 +319,7 @@ public class ParameterEngineService : IParameterEngineService
             {
                 id = Guid.NewGuid(),
                 table_name = tableName,
-                type = BCIConst.ApprovalType.DELETE,
+                type = Const.ApprovalType.DELETE,
                 created_by = Actor,
                 created_date = DateTime.Now,
             };
@@ -359,9 +359,9 @@ public class ParameterEngineService : IParameterEngineService
         var query = _context.tb_parameter_sytem_temporary.Where(e =>
             e.table_name != null
             && AllowedTableNames.Contains(e.table_name)
-            && (e.type == BCIConst.ApprovalType.ADD
-                || e.type == BCIConst.ApprovalType.MODIFIED
-                || e.type == BCIConst.ApprovalType.DELETE));
+            && (e.type == Const.ApprovalType.ADD
+                || e.type == Const.ApprovalType.MODIFIED
+                || e.type == Const.ApprovalType.DELETE));
 
         if (!string.IsNullOrWhiteSpace(request.TableName))
         {
@@ -462,7 +462,7 @@ public class ParameterEngineService : IParameterEngineService
             var columns = await GetTableColumnsAsync(connection, transaction, tableName);
             var now = DateTime.Now;
 
-            if (temporary.type == BCIConst.ApprovalType.DELETE)
+            if (temporary.type == Const.ApprovalType.DELETE)
             {
                 var where = string.Join(" AND ", keyFields.Select((field, index) => $"{Quote(field.FieldName)} = @k{index}"));
                 var command = new SqlCommand { Connection = connection, Transaction = transaction };
@@ -476,7 +476,7 @@ public class ParameterEngineService : IParameterEngineService
                     if (columns.Contains("approved_by")) sets.Add("[approved_by] = @actor");
                     if (columns.Contains("approved_date")) sets.Add("[approved_date] = @now");
                     command.CommandText = $"UPDATE [dbo].{Quote(tableName)} SET {string.Join(", ", sets)} WHERE {where}";
-                    command.Parameters.AddWithValue("@approved", BCIConst.StatusApproval.APPROVED);
+                    command.Parameters.AddWithValue("@approved", Const.StatusApproval.APPROVED);
                     command.Parameters.AddWithValue("@actor", Actor);
                     command.Parameters.AddWithValue("@now", now);
                 }
@@ -498,7 +498,7 @@ public class ParameterEngineService : IParameterEngineService
             else
             {
                 var values = fields.ToDictionary(e => e.FieldName, e => Get(details, e.FieldName), StringComparer.OrdinalIgnoreCase);
-                if (temporary.type == BCIConst.ApprovalType.ADD)
+                if (temporary.type == Const.ApprovalType.ADD)
                 {
                     var insertColumns = new List<string>();
                     var insertParameters = new List<string>();
@@ -624,7 +624,7 @@ public class ParameterEngineService : IParameterEngineService
     private void AddAuditInsertColumns(HashSet<string> columns, SqlCommand command, List<string> insertColumns, List<string> insertParameters, DateTime now)    {
         AddInsertColumn(columns, command, insertColumns, insertParameters, "created_by", Actor);
         AddInsertColumn(columns, command, insertColumns, insertParameters, "created_date", now);
-        AddInsertColumn(columns, command, insertColumns, insertParameters, "status_approval", BCIConst.StatusApproval.APPROVED);
+        AddInsertColumn(columns, command, insertColumns, insertParameters, "status_approval", Const.StatusApproval.APPROVED);
         AddInsertColumn(columns, command, insertColumns, insertParameters, "is_active", true);
         AddInsertColumn(columns, command, insertColumns, insertParameters, "is_deleted", false);
         AddInsertColumn(columns, command, insertColumns, insertParameters, "is_locked", false);
@@ -649,7 +649,7 @@ public class ParameterEngineService : IParameterEngineService
     {
         AddUpdateColumn(columns, command, sets, "modified_by", Actor);
         AddUpdateColumn(columns, command, sets, "modified_date", now);
-        AddUpdateColumn(columns, command, sets, "status_approval", BCIConst.StatusApproval.APPROVED);
+        AddUpdateColumn(columns, command, sets, "status_approval", Const.StatusApproval.APPROVED);
         AddUpdateColumn(columns, command, sets, "approved_by", Actor);
         AddUpdateColumn(columns, command, sets, "approved_date", now);
     }
@@ -853,7 +853,7 @@ public class ParameterEngineService : IParameterEngineService
             screen.screen_menu_import_excel_process_id = importId;
             screen.isActive = ParseBool(Get(details, "screen.is_active"));
             screen.isDeleted = false;
-            screen.statusApproval = BCIConst.StatusApproval.APPROVED;
+            screen.statusApproval = Const.StatusApproval.APPROVED;
             screen.approvedBy = actor;
             screen.approvedDate = now;
             screen.modifiedBy = temporary.created_by;
@@ -880,9 +880,9 @@ public class ParameterEngineService : IParameterEngineService
                   join detail in _context.tb_parameter_sytem_temporary_detail
                       on temporary.id equals detail.tb_parameter_sytem_temporary_id
                   where temporary.table_name == tableName
-                        && (temporary.type == BCIConst.ApprovalType.ADD
-                            || temporary.type == BCIConst.ApprovalType.MODIFIED
-                            || temporary.type == BCIConst.ApprovalType.DELETE)
+                        && (temporary.type == Const.ApprovalType.ADD
+                            || temporary.type == Const.ApprovalType.MODIFIED
+                            || temporary.type == Const.ApprovalType.DELETE)
                         && detail.column_name == "__key"
                         && detail.value == key
                   select temporary.id).AnyAsync();
@@ -1024,23 +1024,23 @@ public class ParameterEngineService : IParameterEngineService
 
     private static string TypeLabel(string? type) => type switch
     {
-        BCIConst.ApprovalType.ADD => "Add",
-        BCIConst.ApprovalType.MODIFIED => "Modify",
-        BCIConst.ApprovalType.DELETE => "Delete",
+        Const.ApprovalType.ADD => "Add",
+        Const.ApprovalType.MODIFIED => "Modify",
+        Const.ApprovalType.DELETE => "Delete",
         _ => type ?? string.Empty,
     };
 
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }

@@ -40,7 +40,7 @@ public class DynamicEngineService : IDynamicEngineService
             .FirstOrDefaultAsync(e => e.id == screenId
                                       && e.isActive != false
                                       && e.isDeleted != true
-                                      && e.statusApproval == BCIConst.StatusApproval.APPROVED);
+                                      && e.statusApproval == Const.StatusApproval.APPROVED);
         if (screen == null)
         {
             return null;
@@ -293,7 +293,7 @@ public class DynamicEngineService : IDynamicEngineService
                 {
                     id = Guid.NewGuid(),
                     table_name = "__import__",
-                    type = BCIConst.ApprovalType.ADD,
+                    type = Const.ApprovalType.ADD,
                     created_by = _currentUser.UserId ?? "system",
                     created_date = DateTime.Now,
                 };
@@ -432,7 +432,7 @@ public class DynamicEngineService : IDynamicEngineService
             return false;
         }
 
-        if (groupId == BCIConst.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
+        if (groupId == Const.DEFAULT_GROUP_ID_ADMINISTRATOR_CODE)
         {
             return true;
         }
@@ -465,7 +465,7 @@ public class DynamicEngineService : IDynamicEngineService
             .FirstOrDefaultAsync(e => e.id == screenId
                                       && e.isActive != false
                                       && e.isDeleted != true
-                                      && e.statusApproval == BCIConst.StatusApproval.APPROVED)
+                                      && e.statusApproval == Const.StatusApproval.APPROVED)
             ?? throw new InvalidOperationException("Screen menu not found.");
 
         if (string.IsNullOrWhiteSpace(screen.query_load))
@@ -518,7 +518,7 @@ public class DynamicEngineService : IDynamicEngineService
             .FirstOrDefaultAsync(e => e.id == reportId
                                       && e.isActive != false
                                       && e.isDeleted != true
-                                      && e.statusApproval == BCIConst.StatusApproval.APPROVED);
+                                      && e.statusApproval == Const.StatusApproval.APPROVED);
         if (report == null || !await HasReportAccessAsync(reportId, _currentUser.UserId))
         {
             return null;
@@ -544,7 +544,7 @@ public class DynamicEngineService : IDynamicEngineService
             .FirstOrDefaultAsync(e => e.id == reportId
                                       && e.isActive != false
                                       && e.isDeleted != true
-                                      && e.statusApproval == BCIConst.StatusApproval.APPROVED)
+                                      && e.statusApproval == Const.StatusApproval.APPROVED)
             ?? throw new InvalidOperationException("Report not found.");
 
         if (!await HasReportAccessAsync(reportId, userId))
@@ -586,7 +586,7 @@ public class DynamicEngineService : IDynamicEngineService
             && e.report_set_id == reportId
             && e.isActive != false
             && e.isDeleted != true
-            && e.statusApproval == BCIConst.StatusApproval.APPROVED);
+            && e.statusApproval == Const.StatusApproval.APPROVED);
     }
 
     private async Task<DynamicLoadResultDto> ExecuteAsync(
@@ -1039,14 +1039,14 @@ public class DynamicEngineService : IDynamicEngineService
     private static BaseGeneralResponse Success(string message) => new()
     {
         Success = true,
-        Code = BCIConst.SUCCESS_CODE,
+        Code = Const.SUCCESS_CODE,
         Message = message,
     };
 
     private static BaseGeneralResponse Fail(string message) => new()
     {
         Success = false,
-        Code = BCIConst.ERROR_CODE,
+        Code = Const.ERROR_CODE,
         Message = message,
     };
 }
