@@ -5,6 +5,9 @@
 @inject SettingApiService SettingApi
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
+@inject ApiService ApiService
+@inject ITokenStorage TokenStorage
+@inject NavigationManager Navigation
 
 <MudBreadcrumbs Items="_breadcrumbs" Separator=">" Class="mb-3" />
 
@@ -14,7 +17,12 @@
         <h1>Role Maintenance</h1>
         <p>Manage user-role assignments and access flags.</p>
     </div>
-    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add Role</MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add Role</MudButton>
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.FileDownload" Disabled="@_isExporting" OnClick="ExportExcelAsync">
+            @(_isExporting ? "Exporting..." : "Export Excel")
+        </MudButton>
+    </div>
 </div>
 
 <MudPaper Elevation="0" Class="dashboard-card">
@@ -99,6 +107,7 @@
 
     private MudTable<RoleListItemDto>? _table;
     private string? _search;
+    private bool _isExporting;
 
     private async Task<TableData<RoleListItemDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
     {
@@ -165,6 +174,32 @@
         if (result is { Canceled: false })
         {
             await ReloadAsync();
+        }
+    }
+
+    private async Task ExportExcelAsync()
+    {
+        var baseAddress = ApiService.ApiBaseAddress;
+        if (string.IsNullOrWhiteSpace(baseAddress))
+        {
+            Snackbar.Add("API address is not available.", Severity.Error);
+            return;
+        }
+
+        _isExporting = true;
+        try
+        {
+            var token = await TokenStorage.GetAccessTokenAsync();
+            var query = $"?access_token={Uri.EscapeDataString(token ?? string.Empty)}";
+            if (!string.IsNullOrWhiteSpace(_search))
+            {
+                query += $"&search={Uri.EscapeDataString(_search)}";
+            }
+            Navigation.NavigateTo($"{baseAddress}/api/usergroup/export{query}", forceLoad: true);
+        }
+        finally
+        {
+            _isExporting = false;
         }
     }
 

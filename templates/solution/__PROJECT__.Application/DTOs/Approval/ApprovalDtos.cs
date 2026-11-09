@@ -56,4 +56,5 @@ public class MenuApprovalListItemDto
     public string ApprovalType { get; set; } = string.Empty;
     public string? RequesterFullName { get; set; }
     public DateTime? CreatedDate { get; set; }
+    public int SelectedAction { get; set; } = 2;
 }

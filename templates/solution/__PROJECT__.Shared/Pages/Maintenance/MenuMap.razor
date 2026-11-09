@@ -1,99 +1,166 @@
 @page "/dashboard/maintenance/menu-map"
 @layout AuthenticatedLayout
 @attribute [Authorize]
+@attribute [Authorize(Roles = "00")]
 @inject SettingApiService SettingApi
 @inject ISnackbar Snackbar
 
-<MudPaper Elevation="0" Class="dashboard-card">
-    <div class="page-heading">
-        <div>
-            <div class="dashboard-kicker">Maintenance</div>
-            <h1>Mapping Menu</h1>
-            <p>Assign menus to a group.</p>
-        </div>
-    </div>
+<MudBreadcrumbs Items="_breadcrumbs" Separator=">" Class="mb-3" />
 
-    <div class="table-toolbar">
-        <MudSelect T="string" @bind-Value="_groupId" Label="Group" Variant="Variant.Outlined" Margin="Margin.Dense">
-            @foreach (var group in _groups)
-            {
-                <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
-            }
-        </MudSelect>
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => LoadAsync())">Load</MudButton>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="@(_ => SaveAsync())">Save Mapping</MudButton>
+<div class="page-heading">
+    <div>
+        <div class="dashboard-kicker">Maintenance</div>
+        <h1>Mapping Menu</h1>
+        <p>Assign menus to a group.</p>
     </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="ResetDefaults">Reset Defaults</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Save" Disabled="@_saving" OnClick="SaveAsync">
+            @(_saving ? "Saving..." : "Save Changes")
+        </MudButton>
+    </div>
+</div>
 
-    @if (_flatMenus.Count == 0)
-    {
-        <MudAlert Severity="Severity.Info">Select a group and click Load.</MudAlert>
-    }
-    else
-    {
-        <MudPaper Elevation="0" Class="menu-map-list">
-            @foreach (var row in _flatMenus)
+<MudGrid Spacing="3">
+    <MudItem xs="12" md="4">
+        <MudPaper Elevation="0" Class="mapping-panel">
+            <MudText Typo="Typo.body2" Class="font-weight-bold mb-2">Group ID</MudText>
+            <MudSelect T="string"
+                       @bind-Value="_groupId"
+                       @bind-Value:after="LoadGroupAsync"
+                       Label="Select Group"
+                       Variant="Variant.Outlined"
+                       FullWidth="true"
+                       Clearable="true">
+                @foreach (var group in _groups)
+                {
+                    <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>
+                }
+            </MudSelect>
+        </MudPaper>
+
+        <MudPaper Elevation="0" Class="mapping-panel mt-4">
+            <div class="d-flex justify-between align-center">
+                <MudText Typo="Typo.body2" Class="font-weight-bold">Main Modules</MudText>
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@(_allMenus?.Count ?? 0) Total</MudChip>
+            </div>
+            <MudDivider Class="my-2" />
+
+            @if (_allMenus != null)
             {
-                <div class="menu-map-row" style="margin-left:@(row.Depth * 24)px">
-                    <MudCheckBox T="bool"
-                                 Value="@_selected.Contains(row.Menu.Id)"
-                                 ValueChanged="@(v => Toggle(row.Menu.Id, v))"
-                                 Color="Color.Primary">
-                        @row.Menu.MenuName <span class="menu-map-unique">(@row.Menu.MenuUnique)</span>
-                    </MudCheckBox>
-                </div>
+                @foreach (var module in _allMenus.Where(m => m.ParentLevelId == "A"))
+                {
+                    var assigned = CountAssigned(module);
+                    var total = CountTotal(module);
+                    <div class="mapping-module-row" @onclick="@(() => FilterTree(module.MenuUnique))">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@MenuIconResolver.GetIcon(module.MenuIcon)" Size="Size.Small" Color="Color.Primary" />
+                            <MudText Typo="Typo.body2">@module.MenuName</MudText>
+                        </div>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">@assigned/@total</MudChip>
+                    </div>
+                }
             }
         </MudPaper>
-    }
-</MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" md="8">
+        <MudPaper Elevation="0" Class="mapping-panel mapping-tree-panel">
+            <MudText Typo="Typo.h6" Class="font-weight-bold mb-4">
+                Menu Structure: @(_selectedGroupName ?? "Select a group")
+            </MudText>
+
+            @if (_filteredTree != null)
+            {
+                <MenuMapTree Node="_filteredTree" SelectedIds="_selectedIds" OnToggle="ToggleNode" />
+            }
+            else
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="text-center pa-8">
+                    Select a group and a module to display its menu tree.
+                </MudText>
+            }
+        </MudPaper>
+    </MudItem>
+</MudGrid>
 
 @code {
+    private readonly List<BreadcrumbItem> _breadcrumbs =
+    [
+        new("Dashboard", href: "/dashboard"),
+        new("Maintenance", href: null),
+        new("Mapping Menu", href: null, disabled: true),
+    ];
+
     private List<DropdownItemDto> _groups = new();
-    private List<MenuRow> _flatMenus = new();
-    private HashSet<long> _selected = new();
+    private List<MenuTreeItemDto>? _allMenus;
+    private MenuTreeItemDto? _filteredTree;
+    private HashSet<long> _selectedIds = new();
     private string? _groupId;
+    private string? _selectedGroupName;
+    private string? _selectedModuleUnique;
     private bool _saving;
 
     protected override async Task OnInitializedAsync()
     {
         _groups = await SettingApi.GetGroupsAsync();
-        if (_groups.Count > 0)
-        {
-            _groupId = _groups[0].Value;
-            await LoadAsync();
-        }
+        _allMenus = await SettingApi.GetMenuTreeAsync();
     }
 
-    private async Task LoadAsync()
+    private async Task LoadGroupAsync()
     {
+        _selectedGroupName = _groups.FirstOrDefault(g => g.Value == _groupId)?.Text;
+        _selectedModuleUnique = null;
+        _selectedIds.Clear();
+        _filteredTree = null;
+
         if (string.IsNullOrWhiteSpace(_groupId))
         {
             return;
         }
 
-        var tree = await SettingApi.GetMenuTreeAsync();
-        _flatMenus = Flatten(tree, 0).ToList();
-
         var assigned = await SettingApi.GetAssignedMenusAsync(_groupId);
-        _selected = assigned.ToHashSet();
+        _selectedIds = assigned.ToHashSet();
+
+        var firstRoot = _allMenus?.FirstOrDefault(m => m.ParentLevelId == "A");
+        if (firstRoot != null)
+        {
+            FilterTree(firstRoot.MenuUnique);
+        }
+
+        StateHasChanged();
     }
 
-    private void Toggle(long id, bool selected)
+    private void FilterTree(string moduleUnique)
     {
-        if (selected)
+        _selectedModuleUnique = moduleUnique;
+        _filteredTree = _allMenus?.FirstOrDefault(m => m.MenuUnique == moduleUnique && m.ParentLevelId == "A");
+        StateHasChanged();
+    }
+
+    private void ToggleNode((MenuTreeItemDto Node, bool Selected) change)
+    {
+        var ids = FlattenNode(change.Node).Select(n => n.Id);
+        foreach (var id in ids)
         {
-            _selected.Add(id);
+            if (change.Selected)
+            {
+                _selectedIds.Add(id);
+            }
+            else
+            {
+                _selectedIds.Remove(id);
+            }
         }
-        else
-        {
-            _selected.Remove(id);
-        }
+
+        StateHasChanged();
     }
 
     private async Task SaveAsync()
     {
         if (string.IsNullOrWhiteSpace(_groupId))
         {
-            Snackbar.Add("Select a group first.", Severity.Warning);
+            Snackbar.Add("Please select a group first.", Severity.Warning);
             return;
         }
 
@@ -103,13 +170,13 @@
             var result = await SettingApi.SaveMenuMapAsync(new MenuMapDto
             {
                 GroupId = _groupId,
-                MenuIds = _selected.ToList(),
+                MenuIds = _selectedIds.ToList(),
             });
 
             Snackbar.Add(result.Message ?? "Save failed.", result.Success ? Severity.Success : Severity.Error);
             if (result.Success)
             {
-                await LoadAsync();
+                await LoadGroupAsync();
             }
         }
         finally
@@ -118,17 +185,42 @@
         }
     }
 
-    private static IEnumerable<MenuRow> Flatten(IEnumerable<MenuTreeItemDto> items, int depth)
+    private void ResetDefaults()
     {
-        foreach (var item in items)
+        _selectedIds.Clear();
+        StateHasChanged();
+        Snackbar.Add("Selections cleared.", Severity.Info);
+    }
+
+    private int CountTotal(MenuTreeItemDto node)
+    {
+        var count = 1;
+        foreach (var child in node.Children)
         {
-            yield return new MenuRow(item, depth);
-            foreach (var child in Flatten(item.Children, depth + 1))
+            count += CountTotal(child);
+        }
+        return count;
+    }
+
+    private int CountAssigned(MenuTreeItemDto node)
+    {
+        var count = _selectedIds.Contains(node.Id) ? 1 : 0;
+        foreach (var child in node.Children)
+        {
+            count += CountAssigned(child);
+        }
+        return count;
+    }
+
+    private static IEnumerable<MenuTreeItemDto> FlattenNode(MenuTreeItemDto node)
+    {
+        yield return node;
+        foreach (var child in node.Children)
+        {
+            foreach (var descendant in FlattenNode(child))
             {
-                yield return child;
+                yield return descendant;
             }
         }
     }
-
-    private sealed record MenuRow(MenuTreeItemDto Menu, int Depth);
 }

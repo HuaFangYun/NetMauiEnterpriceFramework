@@ -225,6 +225,7 @@ public class MenuManagementService : IMenuManagementService
                 Id = e.id,
                 MenuUnique = e.menu_unique,
                 MenuName = e.menu_name,
+                MenuIcon = e.menu_icon,
                 ParentLevelId = e.parent_level_id,
                 MenuUniqueParent = e.menu_unique_parent,
                 OrderSeq = e.order_seq,

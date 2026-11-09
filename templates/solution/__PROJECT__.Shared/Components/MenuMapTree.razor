@@ -1,0 +1,35 @@
+@using __PROJECT__.Application.DTOs.Menu
+@using __PROJECT__.Shared.Utils
+
+<div class="menu-map-tree-node">
+    <MudCheckBox T="bool"
+                 Value="@SelectedIds.Contains(Node.Id)"
+                 ValueChanged="@((bool value) => OnToggle.InvokeAsync((Node, value)))"
+                 Color="Color.Primary">
+        <div class="d-flex align-center gap-2">
+            <MudIcon Icon="@MenuIconResolver.GetIcon(Node.MenuIcon)" Size="Size.Small" Color="Color.Primary" />
+            <span>@Node.MenuName <span class="menu-map-unique">(@Node.MenuUnique)</span></span>
+        </div>
+    </MudCheckBox>
+
+    @if (Node.Children.Count > 0)
+    {
+        <div class="menu-map-tree-children">
+            @foreach (var child in Node.Children)
+            {
+                <MenuMapTree Node="child" SelectedIds="SelectedIds" OnToggle="OnToggle" />
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired]
+    public MenuTreeItemDto Node { get; set; } = new();
+
+    [Parameter]
+    public HashSet<long> SelectedIds { get; set; } = new();
+
+    [Parameter]
+    public EventCallback<(MenuTreeItemDto Node, bool Selected)> OnToggle { get; set; }
+}

@@ -1,5 +1,7 @@
 using System.Security.Claims;
 
+using ClosedXML.Excel;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -51,6 +53,63 @@ public class MenuController : ControllerBase
     [Authorize(Roles = "00")]
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
         => Ok(await _menuManagementService.GetListAsync(request));
+
+    [HttpGet("export")]
+    [Authorize(Roles = "00")]
+    public async Task<IActionResult> Export([FromQuery] string? search)
+    {
+        var items = new List<MenuListItemDto>();
+        var page = 1;
+        while (true)
+        {
+            var result = await _menuManagementService.GetListAsync(new DataTableRequestDto
+            {
+                PageNumber = page,
+                PageSize = 200,
+                SearchTerm = search,
+                SortColumn = "MenuUnique",
+                SortDirection = "asc",
+            });
+            items.AddRange(result.Data);
+            if (items.Count >= result.TotalCount || result.Data.Count == 0)
+            {
+                break;
+            }
+            page++;
+        }
+
+        using var workbook = new XLWorkbook();
+        var sheet = workbook.Worksheets.Add("Menus");
+        var headers = new[] { "ID", "Unique", "Name", "Level", "Parent", "Order", "Status" };
+        for (var column = 0; column < headers.Length; column++)
+        {
+            var cell = sheet.Cell(1, column + 1);
+            cell.Value = headers[column];
+            cell.Style.Font.Bold = true;
+            cell.Style.Fill.BackgroundColor = XLColor.FromHtml("#E8F0FE");
+        }
+
+        for (var row = 0; row < items.Count; row++)
+        {
+            var item = items[row];
+            sheet.Cell(row + 2, 1).Value = item.Id;
+            sheet.Cell(row + 2, 2).Value = item.MenuUnique;
+            sheet.Cell(row + 2, 3).Value = item.MenuName ?? string.Empty;
+            sheet.Cell(row + 2, 4).Value = item.ParentLevelId ?? string.Empty;
+            sheet.Cell(row + 2, 5).Value = item.ParentName ?? item.MenuUniqueParent ?? string.Empty;
+            sheet.Cell(row + 2, 6).Value = item.OrderSeq?.ToString() ?? string.Empty;
+            sheet.Cell(row + 2, 7).Value = item.IsActive ? "Active" : "Inactive";
+        }
+
+        sheet.SheetView.FreezeRows(1);
+        sheet.Columns().AdjustToContents();
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        return File(
+            stream.ToArray(),
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"menus_{DateTime.Now:yyyyMMddHHmmss}.xlsx");
+    }
 
     [HttpGet("detail/{id:long}")]
     [Authorize(Roles = "00")]

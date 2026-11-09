@@ -328,6 +328,40 @@ html, body {
     font-weight: 500;
 }
 
+.mapping-panel {
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+}
+
+.mapping-tree-panel {
+    min-height: 400px;
+}
+
+.mapping-module-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 4px;
+    border-bottom: 1px solid #f1f5f9;
+    cursor: pointer;
+}
+
+.mapping-module-row:hover {
+    background: #f8fafc;
+}
+
+.menu-map-tree-node {
+    padding: 2px 0;
+}
+
+.menu-map-tree-children {
+    margin-left: 28px;
+    padding-left: 12px;
+    border-left: 1px dashed #dbe5f1;
+}
+
 .parameter-card {
     padding: 18px;
     border: 1px solid #e2e8f0;

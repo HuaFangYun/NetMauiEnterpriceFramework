@@ -36,6 +36,7 @@ public class MenuTreeItemDto
     public long Id { get; set; }
     public string MenuUnique { get; set; } = string.Empty;
     public string? MenuName { get; set; }
+    public string? MenuIcon { get; set; }
     public string? ParentLevelId { get; set; }
     public string? MenuUniqueParent { get; set; }
     public int? OrderSeq { get; set; }
