@@ -15,12 +15,12 @@
                 if (string.Equals(field.FieldType, "bit", StringComparison.OrdinalIgnoreCase))
                 {
                     <MudItem xs="12" Class="d-flex align-center">
-                        <MudCheckBox T="bool"
-                                     Value="@IsTrue(value)"
-                                     ValueChanged="@(v => SetBool(field.FieldName, v))"
-                                     Label="@label"
-                                     Color="Color.Primary"
-                                     Disabled="@(IsEdit && field.IsKey)" />
+                        <MudSwitch T="bool"
+                                   Value="@IsTrue(value)"
+                                   ValueChanged="@(v => SetBool(field.FieldName, v))"
+                                   Label="@label"
+                                   Color="Color.Primary"
+                                   Disabled="@(IsEdit && field.IsKey)" />
                     </MudItem>
                 }
                 else if (string.Equals(field.FieldType, "list", StringComparison.OrdinalIgnoreCase)

@@ -143,6 +143,52 @@ public class ParameterEngineService : IParameterEngineService
         return result;
     }
 
+    public async Task<GeneralListResponseDto<ParameterApprovalRowDto>> GetApprovalRowsAsync(string tableName, DataTableRequestDto request)
+    {
+        tableName = NormalizeTable(tableName);
+        var page = Math.Max(1, request.PageNumber);
+        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
+
+        var rows = await _context.tb_parameter_sytem_temporary
+            .Where(e => e.table_name == tableName
+                        && (e.type == Const.ApprovalType.ADD
+                            || e.type == Const.ApprovalType.MODIFIED
+                            || e.type == Const.ApprovalType.DELETE))
+            .OrderByDescending(e => e.created_date)
+            .ToListAsync();
+
+        var details = await LoadDetailsAsync(rows.Select(e => e.id));
+        var list = rows.Select(row => new ParameterApprovalRowDto
+        {
+            IdPending = row.id,
+            TypeParameter = row.type == Const.ApprovalType.ADD ? "Insert" : TypeLabel(row.type),
+            Fields = details.GetValueOrDefault(row.id) ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase),
+        }).ToList();
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var search = request.SearchTerm.Trim();
+            list = list.Where(row =>
+                row.IdPending.ToString().Contains(search, StringComparison.OrdinalIgnoreCase)
+                || row.TypeParameter.Contains(search, StringComparison.OrdinalIgnoreCase)
+                || row.Fields.Values.Any(value => value?.Contains(search, StringComparison.OrdinalIgnoreCase) == true))
+                .ToList();
+        }
+
+        var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
+        {
+            "typeparameter" => descending ? list.OrderByDescending(e => e.TypeParameter).ToList() : list.OrderBy(e => e.TypeParameter).ToList(),
+            _ => descending ? list.OrderByDescending(e => e.IdPending).ToList() : list.OrderBy(e => e.IdPending).ToList(),
+        };
+
+        return new GeneralListResponseDto<ParameterApprovalRowDto>
+        {
+            Data = list.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
+            TotalCount = list.Count,
+        };
+    }
+
     public async Task<ParameterListResponseDto> GetListAsync(string tableName, DataTableRequestDto request)
     {
         tableName = NormalizeTable(tableName);

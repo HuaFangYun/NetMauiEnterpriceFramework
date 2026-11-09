@@ -63,6 +63,7 @@ public class TabStateService
 
     public void RefreshTab(AppTabDto tab)
     {
+        ActiveTab = tab;
         tab.RefreshKey = Guid.NewGuid();
         NotifyChanged();
     }

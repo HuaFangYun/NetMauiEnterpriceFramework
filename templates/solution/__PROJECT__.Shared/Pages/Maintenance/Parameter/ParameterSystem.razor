@@ -32,6 +32,13 @@
                 <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddAsync())">Add</MudButton>
             </div>
         }
+        else if (IsApprovalView)
+        {
+            <div class="d-flex gap-2">
+                <MudButton Variant="Variant.Outlined" Color="Color.Success" StartIcon="@Icons.Material.Filled.DoneAll" OnClick="ApproveAll">Approve All</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DoNotDisturb" OnClick="RejectAll">Reject All</MudButton>
+            </div>
+        }
     </div>
 
     @if (_loading)
@@ -43,27 +50,34 @@
         <MudGrid Spacing="3">
             @foreach (var card in _cards)
             {
-                <MudItem xs="12" sm="6" md="4">
+                <MudItem xs="12" sm="6" md="4" lg="3">
                     <MudPaper Elevation="0" Class="parameter-card">
-                        <div class="parameter-card-head">
-                            <MudIcon Icon="@MenuIconResolver.GetIcon(card.Icon)" Color="Color.Primary" />
-                            <MudChip T="string" Size="Size.Small" Color="@(card.PendingCount > 0 ? Color.Warning : Color.Default)">@card.PendingCount pending</MudChip>
+                        <div class="parameter-card-title-row">
+                            <h3>@card.Description</h3>
+                            @if (card.PendingCount > 0)
+                            {
+                                <MudIcon Icon="@Icons.Material.Filled.NotificationImportant" Color="Color.Error" Size="Size.Small" />
+                            }
                         </div>
-                        <h3>@card.Description</h3>
-                        <div class="parameter-card-actions">
-                            @if (IsMakerCards && card.IsMaker)
-                            {
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
-                            }
-                            @if (IsApprovalCards && card.IsApproval)
-                            {
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
-                            }
-                            @if (IsGenericCards)
-                            {
-                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" Size="Size.Small" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
-                            }
+                        <div class="parameter-card-footer">
+                            <MudIcon Icon="@MenuIconResolver.GetIcon(card.Icon)"
+                                     Color="@(IsApprovalCards ? Color.Warning : Color.Primary)"
+                                     Size="Size.Large" />
+                            <div class="d-flex gap-2">
+                                @if (IsMakerCards && card.IsMaker)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="parameter-card-action" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
+                                }
+                                @if (IsApprovalCards && card.IsApproval)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Class="parameter-card-action" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                                }
+                                @if (IsGenericCards)
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" Size="Size.Small" Class="parameter-card-action" OnClick="@(_ => OpenMaker(card))">Maker</MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" Class="parameter-card-action" OnClick="@(_ => OpenApproval(card))">Approval</MudButton>
+                                }
+                            </div>
                         </div>
                     </MudPaper>
                 </MudItem>
@@ -120,41 +134,51 @@
     }
     else if (IsApprovalView)
     {
-        <div class="table-toolbar">
-            <MudTextField @bind-Value="_search"
-                          Placeholder="Search request..."
-                          Variant="Variant.Outlined"
-                          Margin="Margin.Dense"
-                          Adornment="Adornment.Start"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          Immediate="true" />
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(_ => ReloadPendingAsync())">Search</MudButton>
-        </div>
-
-        <MudTable T="ParameterPendingListItemDto"
-                  @ref="_pendingTable"
-                  ServerData="LoadPendingData"
+        <MudTable T="ParameterApprovalRowDto"
+                  @ref="_approvalTable"
+                  ServerData="LoadApprovalData"
                   Hover="true"
-                  Dense="true"
+                  Dense="false"
                   Breakpoint="Breakpoint.Sm"
-                  Elevation="0">
+                  Elevation="0"
+                  HorizontalScrollbar="true">
+            <ToolBarContent>
+                <MudSpacer />
+                <MudTextField @bind-Value="_search"
+                              @bind-Value:after="ReloadApprovalAsync"
+                              Label="Search"
+                              Placeholder="Search..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              Immediate="true"
+                              Class="approval-search" />
+            </ToolBarContent>
             <HeaderContent>
-                <MudTh>Table</MudTh>
-                <MudTh>Type</MudTh>
-                <MudTh>Key</MudTh>
-                <MudTh>Summary</MudTh>
-                <MudTh>Requester</MudTh>
-                <MudTh>Actions</MudTh>
+                <MudTh>ID Pending</MudTh>
+                <MudTh>TypeParameter</MudTh>
+                @foreach (var field in _approvalFields)
+                {
+                    <MudTh>@(field.FieldDesc?.Replace("_", " ") ?? field.FieldName)</MudTh>
+                }
+                <MudTh Style="text-align:center;">Action</MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Table">@context.TableName</MudTd>
-                <MudTd DataLabel="Type"><MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Type</MudChip></MudTd>
-                <MudTd DataLabel="Key"><code>@context.KeyValue</code></MudTd>
-                <MudTd DataLabel="Summary">@context.Summary</MudTd>
-                <MudTd DataLabel="Requester">@context.RequesterFullName</MudTd>
-                <MudTd DataLabel="Actions">
-                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="@(_ => ProcessPendingAsync(context.Id, true))">Approve</MudButton>
-                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="@(_ => ProcessPendingAsync(context.Id, false))">Reject</MudButton>
+                <MudTd DataLabel="ID Pending" Style="max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    @context.IdPending
+                </MudTd>
+                <MudTd DataLabel="TypeParameter">@context.TypeParameter</MudTd>
+                @foreach (var field in _approvalFields)
+                {
+                    <MudTd DataLabel="@(field.FieldDesc ?? field.FieldName)">@GetApprovalDisplay(field, context.Fields.GetValueOrDefault(field.FieldName))</MudTd>
+                }
+                <MudTd DataLabel="Action" Style="text-align:center;">
+                    <MudRadioGroup @bind-Value="context.Action" Class="approval-radios">
+                        <MudRadio T="int" Value="1" Color="Color.Primary">Approve</MudRadio>
+                        <MudRadio T="int" Value="2" Color="Color.Default">Pending</MudRadio>
+                        <MudRadio T="int" Value="0" Color="Color.Error">Reject</MudRadio>
+                    </MudRadioGroup>
                 </MudTd>
             </RowTemplate>
             <NoRecordsContent>
@@ -164,6 +188,12 @@
                 <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
             </PagerContent>
         </MudTable>
+
+        <div class="d-flex justify-center mt-4">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Gavel" Disabled="@_submittingApproval" OnClick="SubmitApprovalsAsync">
+                @(_submittingApproval ? "Submitting..." : "Submit")
+            </MudButton>
+        </div>
     }
 </MudPaper>
 
@@ -180,12 +210,16 @@
 
     private List<ParameterCardDto> _cards = new();
     private List<ParameterFieldDto> _makerFields = new();
+    private List<ParameterFieldDto> _approvalFields = new();
+    private List<ParameterApprovalRowDto> _approvalRows = new();
+    private Dictionary<string, List<DropdownItemDto>> _approvalOptions = new(StringComparer.OrdinalIgnoreCase);
     private MudTable<Dictionary<string, string>>? _makerTable;
-    private MudTable<ParameterPendingListItemDto>? _pendingTable;
+    private MudTable<ParameterApprovalRowDto>? _approvalTable;
     private string? _search;
     private string? _cardDescription;
     private bool _loading;
     private bool _exporting;
+    private bool _submittingApproval;
 
     private bool IsCardsView => string.IsNullOrWhiteSpace(TableName);
     private bool IsMakerView => string.Equals(Mode, "maker", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(TableName);
@@ -236,6 +270,8 @@
             {
                 _cards = await ParameterApi.GetCardsAsync();
                 _cardDescription = _cards.FirstOrDefault(c => c.TableName == TableName)?.Description;
+                _approvalFields = await ParameterApi.GetFieldsAsync(TableName!);
+                _approvalOptions = await ParameterApi.GetOptionsAsync(TableName!);
             }
             else if (IsCardsView)
             {
@@ -252,9 +288,9 @@
             await _makerTable.ReloadServerData();
         }
 
-        if (IsApprovalView && _pendingTable != null)
+        if (IsApprovalView && _approvalTable != null)
         {
-            await _pendingTable.ReloadServerData();
+            await _approvalTable.ReloadServerData();
         }
     }
 
@@ -277,11 +313,10 @@
         return new TableData<Dictionary<string, string>> { Items = response.Rows, TotalItems = response.TotalCount };
     }
 
-    private async Task<TableData<ParameterPendingListItemDto>> LoadPendingData(TableState state, CancellationToken cancellationToken)
+    private async Task<TableData<ParameterApprovalRowDto>> LoadApprovalData(TableState state, CancellationToken cancellationToken)
     {
-        var response = await ParameterApi.GetPendingAsync(new ParameterPendingRequestDto
+        var response = await ParameterApi.GetApprovalRowsAsync(TableName!, new DataTableRequestDto
         {
-            TableName = TableName,
             PageNumber = state.Page + 1,
             PageSize = state.PageSize,
             SearchTerm = _search,
@@ -289,7 +324,13 @@
             SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
         });
 
-        return new TableData<ParameterPendingListItemDto> { Items = response.Data, TotalItems = response.TotalCount };
+        _approvalRows = response.Data;
+        foreach (var row in _approvalRows)
+        {
+            row.Action = 2;
+        }
+
+        return new TableData<ParameterApprovalRowDto> { Items = _approvalRows, TotalItems = response.TotalCount };
     }
 
     private void OpenMaker(ParameterCardDto card)
@@ -350,12 +391,30 @@
         }
     }
 
-    private async Task ReloadPendingAsync()
+    private async Task ReloadApprovalAsync()
     {
-        if (_pendingTable != null)
+        if (_approvalTable != null)
         {
-            await _pendingTable.ReloadServerData();
+            await _approvalTable.ReloadServerData();
         }
+    }
+
+    private void ApproveAll()
+    {
+        foreach (var row in _approvalRows)
+        {
+            row.Action = 1;
+        }
+        StateHasChanged();
+    }
+
+    private void RejectAll()
+    {
+        foreach (var row in _approvalRows)
+        {
+            row.Action = 0;
+        }
+        StateHasChanged();
     }
 
     private async Task OpenAddAsync()
@@ -419,27 +478,82 @@
         await ReloadMakerAsync();
     }
 
-    private async Task ProcessPendingAsync(Guid id, bool approve)
+    private string GetApprovalDisplay(ParameterFieldDto field, string? value)
     {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return string.Empty;
+        }
+
+        if (string.Equals(field.FieldType, "bit", StringComparison.OrdinalIgnoreCase))
+        {
+            return value == "1" || value.Equals("true", StringComparison.OrdinalIgnoreCase) ? "Yes" : "No";
+        }
+
+        if (string.Equals(field.FieldType, "list", StringComparison.OrdinalIgnoreCase)
+            && _approvalOptions.TryGetValue(field.FieldName, out var options))
+        {
+            return options.FirstOrDefault(option => option.Value == value)?.Text ?? value;
+        }
+
+        return value;
+    }
+
+    private async Task SubmitApprovalsAsync()
+    {
+        var approveIds = _approvalRows.Where(x => x.Action == 1).Select(x => x.IdPending).ToList();
+        var rejectIds = _approvalRows.Where(x => x.Action == 0).Select(x => x.IdPending).ToList();
+
+        if (approveIds.Count == 0 && rejectIds.Count == 0)
+        {
+            Snackbar.Add("No approvals or rejections selected.", Severity.Warning);
+            return;
+        }
+
         var parameters = new DialogParameters
         {
-            ["Title"] = approve ? "Approve Parameter" : "Reject Parameter",
-            ["Message"] = approve ? "Apply this parameter request?" : "Reject this parameter request?",
-            ["ConfirmText"] = approve ? "Approve" : "Reject",
+            ["Title"] = "Confirm Submission",
+            ["Message"] = $"Approve {approveIds.Count} item(s) and reject {rejectIds.Count} item(s)?",
+            ["ConfirmText"] = "Submit",
         };
 
-        var dialog = await DialogService.ShowAsync<ConfirmDialog>(approve ? "Approve Parameter" : "Reject Parameter", parameters);
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Confirm Submission", parameters);
         var result = await dialog.Result;
         if (result is not { Canceled: false })
         {
             return;
         }
 
-        var response = approve
-            ? await ParameterApi.ApproveAsync(id)
-            : await ParameterApi.RejectAsync(id);
+        _submittingApproval = true;
+        try
+        {
+            var failed = 0;
+            foreach (var id in approveIds)
+            {
+                var response = await ParameterApi.ApproveAsync(id);
+                if (!response.Success)
+                {
+                    failed++;
+                }
+            }
 
-        Snackbar.Add(response.Message ?? "Processed.", response.Success ? Severity.Success : Severity.Error);
-        await ReloadPendingAsync();
+            foreach (var id in rejectIds)
+            {
+                var response = await ParameterApi.RejectAsync(id);
+                if (!response.Success)
+                {
+                    failed++;
+                }
+            }
+
+            Snackbar.Add(
+                failed == 0 ? "Approval processed successfully." : $"{failed} request(s) failed.",
+                failed == 0 ? Severity.Success : Severity.Error);
+            await ReloadApprovalAsync();
+        }
+        finally
+        {
+            _submittingApproval = false;
+        }
     }
 }

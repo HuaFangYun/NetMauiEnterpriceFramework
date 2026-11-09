@@ -105,6 +105,19 @@ public class ParameterController : ControllerBase
         }
     }
 
+    [HttpPost("approval-list/{tableName}")]
+    public async Task<IActionResult> GetApprovalRows(string tableName, [FromBody] DataTableRequestDto request)
+    {
+        try
+        {
+            return Ok(await _parameterService.GetApprovalRowsAsync(tableName, request));
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("{tableName}/list")]
     public async Task<IActionResult> GetList(string tableName, [FromBody] DataTableRequestDto request)
     {

@@ -64,6 +64,14 @@ public class ParameterPendingListItemDto
     public DateTime? CreatedDate { get; set; }
 }
 
+public class ParameterApprovalRowDto
+{
+    public Guid IdPending { get; set; }
+    public string TypeParameter { get; set; } = string.Empty;
+    public Dictionary<string, string?> Fields { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    public int Action { get; set; } = 2;
+}
+
 public class ParameterKeyRequestDto
 {
     public string TableName { get; set; } = string.Empty;

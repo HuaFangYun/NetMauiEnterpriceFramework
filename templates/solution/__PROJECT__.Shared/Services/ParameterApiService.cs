@@ -22,6 +22,11 @@ public class ParameterApiService
                $"api/parameter/{Uri.EscapeDataString(tableName)}/options")
            ?? new Dictionary<string, List<DropdownItemDto>>(StringComparer.OrdinalIgnoreCase);
 
+    public async Task<GeneralListResponseDto<ParameterApprovalRowDto>> GetApprovalRowsAsync(string tableName, DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<ParameterApprovalRowDto>>(
+               $"api/parameter/approval-list/{Uri.EscapeDataString(tableName)}", request)
+           ?? new GeneralListResponseDto<ParameterApprovalRowDto>();
+
     public async Task<ParameterListResponseDto> GetListAsync(string tableName, DataTableRequestDto request)
         => await _api.PostRawFromJsonAsync<DataTableRequestDto, ParameterListResponseDto>(
                $"api/parameter/{Uri.EscapeDataString(tableName)}/list", request)

@@ -376,9 +376,33 @@ html, body {
     margin-bottom: 12px;
 }
 
+.parameter-card-title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
 .parameter-card h3 {
-    margin: 0 0 6px;
+    margin: 0;
     font-size: 16px;
+}
+
+.parameter-card-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+}
+
+.parameter-card-footer .mud-icon-root {
+    font-size: 30px;
+}
+
+.parameter-card-action {
+    border-radius: 999px !important;
+    text-transform: none;
 }
 
 .parameter-card code {
