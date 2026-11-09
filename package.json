@@ -30,7 +30,8 @@
     "templates",
     "README.md",
     "INSTALL.md",
-    "LICENSE"
+    "LICENSE",
+    "scaffold.example.json"
   ],
   "engines": {
     "node": ">=20"
