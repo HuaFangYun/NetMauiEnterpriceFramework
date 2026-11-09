@@ -100,7 +100,6 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
             modelBuilder.Entity("__PROJECT__.Domain.Entities.enum_status_approval", b =>
                 {
                     b.Property<int>("status_code")
-                        .ValueGeneratedNever()
                         .HasColumnType("int");
 
                     b.Property<string>("status_name")
@@ -1505,10 +1504,6 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                         .HasColumnType("bit")
                         .HasColumnName("is_locked");
 
-                    b.Property<string>("kode_cabang")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
-
                     b.Property<DateTime?>("last_password_change_date")
                         .HasColumnType("datetime2");
 
@@ -1520,10 +1515,6 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                     b.Property<DateTime?>("modifiedDate")
                         .HasColumnType("datetime2")
                         .HasColumnName("modified_date");
-
-                    b.Property<string>("nomor_induk_karyawan")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
 
                     b.Property<string>("password")
                         .HasMaxLength(255)

@@ -48,11 +48,6 @@ public class AuthService : IAuthService
             throw new AuthenticationException("User has no assigned role. Please contact administrator.");
         }
 
-        if (string.IsNullOrWhiteSpace(user.kode_cabang))
-        {
-            throw new AuthenticationException("User has no assigned branch. Please contact administrator.");
-        }
-
         var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(user.user_id);
         if (flag == null)
         {
@@ -253,7 +248,6 @@ public class AuthService : IAuthService
         {
             UserId = user.user_id,
             UserName = user.user_id,
-            KodeCabang = user.kode_cabang,
             FullName = user.full_name,
             RoleId = userGroup?.group_id,
             Email = user.email,

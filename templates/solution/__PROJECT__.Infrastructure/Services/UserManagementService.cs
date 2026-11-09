@@ -43,10 +43,8 @@ public class UserManagementService : IUserManagementService
                         FullName = u.full_name,
                         Email = u.email,
                         PhoneNumber = u.phone_number,
-                        KodeCabang = u.kode_cabang,
                         GenderId = u.gender_id,
                         GenderName = e != null ? e.gender_name : null,
-                        NomorIndukKaryawan = u.nomor_induk_karyawan,
                         GroupId = ug != null ? ug.group_id : null,
                         GroupName = g != null ? g.group_name : null,
                         IsActive = u.isActive == true,
@@ -60,8 +58,7 @@ public class UserManagementService : IUserManagementService
             query = query.Where(x =>
                 x.UserId.Contains(search)
                 || (x.FullName != null && x.FullName.Contains(search))
-                || (x.Email != null && x.Email.Contains(search))
-                || (x.NomorIndukKaryawan != null && x.NomorIndukKaryawan.Contains(search)));
+                || (x.Email != null && x.Email.Contains(search)));
         }
 
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
@@ -69,7 +66,6 @@ public class UserManagementService : IUserManagementService
         {
             "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
             "email" => desc ? query.OrderByDescending(x => x.Email) : query.OrderBy(x => x.Email),
-            "kodecabang" => desc ? query.OrderByDescending(x => x.KodeCabang) : query.OrderBy(x => x.KodeCabang),
             "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
             "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),
             _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
@@ -79,6 +75,58 @@ public class UserManagementService : IUserManagementService
         var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
 
         return new GeneralListResponseDto<UserListItemDto>
+        {
+            Data = data,
+            TotalCount = totalCount,
+        };
+    }
+
+    public async Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagListAsync(DataTableRequestDto request)
+    {
+        var page = Math.Max(1, request.PageNumber);
+        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
+
+        var query = from u in _context.um_user_app
+                    join f in _context.um_user_app_flag on u.user_id equals f.user_id into flagJoin
+                    from f in flagJoin.DefaultIfEmpty()
+                    where u.isDeleted != true
+                    select new UserFlagDto
+                    {
+                        UserId = u.user_id,
+                        FullName = u.full_name,
+                        IsLogin = f != null ? f.is_login : null,
+                        IsFirstLogin = f != null ? f.is_first_login : null,
+                        IsLocked = f != null ? f.is_locked : null,
+                        FailedPasswordAttempt = f != null ? f.failed_password_attempt_count : null,
+                        IpAddress = f != null ? f.ip_address : null,
+                        LastLoginDate = f != null ? f.last_login_date : null,
+                        Comment = f != null ? f.comment : null,
+                    };
+
+        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
+        {
+            var search = request.SearchTerm.Trim();
+            query = query.Where(x =>
+                x.UserId.Contains(search)
+                || (x.FullName != null && x.FullName.Contains(search))
+                || (x.IpAddress != null && x.IpAddress.Contains(search)));
+        }
+
+        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
+        {
+            "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
+            "islogin" => desc ? query.OrderByDescending(x => x.IsLogin) : query.OrderBy(x => x.IsLogin),
+            "isfirstlogin" => desc ? query.OrderByDescending(x => x.IsFirstLogin) : query.OrderBy(x => x.IsFirstLogin),
+            "islocked" => desc ? query.OrderByDescending(x => x.IsLocked) : query.OrderBy(x => x.IsLocked),
+            "lastlogindate" => desc ? query.OrderByDescending(x => x.LastLoginDate) : query.OrderBy(x => x.LastLoginDate),
+            _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
+        };
+
+        var totalCount = await query.CountAsync();
+        var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+
+        return new GeneralListResponseDto<UserFlagDto>
         {
             Data = data,
             TotalCount = totalCount,
@@ -101,9 +149,7 @@ public class UserManagementService : IUserManagementService
             FullName = user.full_name,
             Email = user.email,
             PhoneNumber = user.phone_number,
-            KodeCabang = user.kode_cabang,
             GenderId = user.gender_id,
-            NomorIndukKaryawan = user.nomor_induk_karyawan,
             GroupId = userGroup?.group_id,
             IsActive = user.isActive == true,
         };
@@ -144,9 +190,7 @@ public class UserManagementService : IUserManagementService
                 full_name = dto.FullName,
                 email = dto.Email,
                 phone_number = dto.PhoneNumber,
-                kode_cabang = dto.KodeCabang,
                 gender_id = dto.GenderId,
-                nomor_induk_karyawan = dto.NomorIndukKaryawan,
                 group_id = dto.GroupId,
                 password = _passwordHasher.HashPassword(dto.Password),
                 approval_type_id = Const.ApprovalType.ADD,
@@ -195,9 +239,7 @@ public class UserManagementService : IUserManagementService
                 full_name = dto.FullName,
                 email = dto.Email,
                 phone_number = dto.PhoneNumber,
-                kode_cabang = dto.KodeCabang,
                 gender_id = dto.GenderId,
-                nomor_induk_karyawan = dto.NomorIndukKaryawan,
                 group_id = dto.GroupId,
                 password = string.IsNullOrWhiteSpace(dto.Password) ? null : _passwordHasher.HashPassword(dto.Password),
                 approval_type_id = Const.ApprovalType.MODIFIED,
@@ -241,9 +283,7 @@ public class UserManagementService : IUserManagementService
                 full_name = user.full_name,
                 email = user.email,
                 phone_number = user.phone_number,
-                kode_cabang = user.kode_cabang,
                 gender_id = user.gender_id,
-                nomor_induk_karyawan = user.nomor_induk_karyawan,
                 group_id = role?.group_id,
                 approval_type_id = Const.ApprovalType.DELETE,
                 is_active = false,

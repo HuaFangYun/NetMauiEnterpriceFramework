@@ -6,6 +6,7 @@ namespace __PROJECT__.Application.Interfaces;
 public interface IUserManagementService
 {
     Task<GeneralListResponseDto<UserListItemDto>> GetListAsync(DataTableRequestDto request);
+    Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagListAsync(DataTableRequestDto request);
     Task<UserEditDto?> GetByIdAsync(string userId);
     Task<BaseGeneralResponse> CreateAsync(UserEditDto dto);
     Task<BaseGeneralResponse> UpdateAsync(string userId, UserEditDto dto);

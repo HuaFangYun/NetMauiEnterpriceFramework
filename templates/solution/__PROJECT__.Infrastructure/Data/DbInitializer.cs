@@ -54,7 +54,6 @@ public static class DbInitializer
             full_name = adminName,
             password = passwordHasher.HashPassword(adminPassword),
             email = adminEmail,
-            kode_cabang = branchCode,
             last_password_change_date = now,
             statusApproval = Const.StatusApproval.APPROVED,
             isActive = true,

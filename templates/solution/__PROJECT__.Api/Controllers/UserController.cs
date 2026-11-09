@@ -23,6 +23,10 @@ public class UserController : ControllerBase
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
         => Ok(await _userService.GetListAsync(request));
 
+    [HttpPost("list-user-flag")]
+    public async Task<IActionResult> GetUserFlagList([FromBody] DataTableRequestDto request)
+        => Ok(await _userService.GetUserFlagListAsync(request));
+
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] string? search)
     {
@@ -53,8 +57,8 @@ public class UserController : ControllerBase
         var sheet = workbook.Worksheets.Add("Users");
         var headers = new[]
         {
-            "User Id", "Nomor Induk Karyawan", "Branch", "Full Name",
-            "Gender", "Email", "Phone Number", "Role", "Status",
+            "User Id", "Full Name", "Gender", "Email",
+            "Phone Number", "Role", "Status",
         };
 
         for (var column = 0; column < headers.Length; column++)
@@ -70,14 +74,12 @@ public class UserController : ControllerBase
             var user = users[row];
             var status = user.IsLocked ? "Locked" : user.IsActive ? "Active" : "Inactive";
             sheet.Cell(row + 2, 1).Value = user.UserId;
-            sheet.Cell(row + 2, 2).Value = user.NomorIndukKaryawan ?? string.Empty;
-            sheet.Cell(row + 2, 3).Value = user.KodeCabang ?? string.Empty;
-            sheet.Cell(row + 2, 4).Value = user.FullName ?? string.Empty;
-            sheet.Cell(row + 2, 5).Value = user.GenderName ?? string.Empty;
-            sheet.Cell(row + 2, 6).Value = user.Email ?? string.Empty;
-            sheet.Cell(row + 2, 7).Value = user.PhoneNumber ?? string.Empty;
-            sheet.Cell(row + 2, 8).Value = user.GroupName ?? string.Empty;
-            sheet.Cell(row + 2, 9).Value = status;
+            sheet.Cell(row + 2, 2).Value = user.FullName ?? string.Empty;
+            sheet.Cell(row + 2, 3).Value = user.GenderName ?? string.Empty;
+            sheet.Cell(row + 2, 4).Value = user.Email ?? string.Empty;
+            sheet.Cell(row + 2, 5).Value = user.PhoneNumber ?? string.Empty;
+            sheet.Cell(row + 2, 6).Value = user.GroupName ?? string.Empty;
+            sheet.Cell(row + 2, 7).Value = status;
         }
 
         sheet.SheetView.FreezeRows(1);

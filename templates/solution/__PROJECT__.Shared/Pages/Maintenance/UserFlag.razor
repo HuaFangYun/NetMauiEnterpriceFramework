@@ -1,5 +1,164 @@
 @page "/dashboard/maintenance/user-flag"
 @layout AuthenticatedLayout
 @attribute [Authorize]
+@attribute [Authorize(Roles = "00")]
+@inject SettingApiService SettingApi
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
 
-<MaintenancePlaceholder Title="User Flag" Subtitle="Lockout and login flags" />
+<MudBreadcrumbs Items="_breadcrumbs" Separator=">" Class="mb-3" />
+
+<div class="page-heading">
+    <div>
+        <div class="dashboard-kicker">Maintenance</div>
+        <h1>User Flag Management</h1>
+        <p>Lockout and login flags.</p>
+    </div>
+</div>
+
+<MudPaper Elevation="0" Class="dashboard-card">
+    <MudTable T="UserFlagDto"
+              @ref="_table"
+              ServerData="LoadServerData"
+              Hover="true"
+              Dense="false"
+              Breakpoint="Breakpoint.Sm"
+              Elevation="0"
+              HorizontalScrollbar="true">
+        <ToolBarContent>
+            <MudSpacer />
+            <MudTextField @bind-Value="_search"
+                          @bind-Value:after="OnSearchChanged"
+                          Label="Search"
+                          Placeholder="Search by ID, name, IP..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true"
+                          Class="user-search" />
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh Style="text-align:center;">Actions</MudTh>
+            <MudTh>User Id</MudTh>
+            <MudTh>Full Name</MudTh>
+            <MudTh>Is Login</MudTh>
+            <MudTh>Is First Login</MudTh>
+            <MudTh>Is Locked</MudTh>
+            <MudTh>Failed Password Attempt</MudTh>
+            <MudTh>Last IP Address</MudTh>
+            <MudTh>Last Login Date</MudTh>
+            <MudTh>Comment</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">
+                <MudIconButton Icon="@Icons.Material.Filled.LockOpen"
+                               Size="Size.Small"
+                               Color="Color.Primary"
+                               OnClick="@(_ => UnlockAsync(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.LockReset"
+                               Size="Size.Small"
+                               Color="Color.Secondary"
+                               OnClick="@(_ => ResetPasswordAsync(context))" />
+            </MudTd>
+            <MudTd DataLabel="User Id">@context.UserId</MudTd>
+            <MudTd DataLabel="Full Name">@context.FullName</MudTd>
+            <MudTd DataLabel="Is Login">@ToYesNo(context.IsLogin)</MudTd>
+            <MudTd DataLabel="Is First Login">@ToYesNo(context.IsFirstLogin)</MudTd>
+            <MudTd DataLabel="Is Locked">@ToYesNo(context.IsLocked)</MudTd>
+            <MudTd DataLabel="Failed Password Attempt">@context.FailedPasswordAttempt</MudTd>
+            <MudTd DataLabel="Last IP Address">@context.IpAddress</MudTd>
+            <MudTd DataLabel="Last Login Date">@context.LastLoginDate?.ToString("yyyy-MM-dd HH:mm:ss")</MudTd>
+            <MudTd DataLabel="Comment">@context.Comment</MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No user flags found.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudProgressLinear Indeterminate="true" />
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private readonly List<BreadcrumbItem> _breadcrumbs =
+    [
+        new("Dashboard", href: "/dashboard"),
+        new("Maintenance", href: null),
+        new("User Flag Management", href: null, disabled: true),
+    ];
+
+    private MudTable<UserFlagDto>? _table;
+    private string? _search;
+
+    private async Task<TableData<UserFlagDto>> LoadServerData(TableState state, CancellationToken cancellationToken)
+    {
+        var response = await SettingApi.GetUserFlagsAsync(new DataTableRequestDto
+        {
+            PageNumber = state.Page + 1,
+            PageSize = state.PageSize,
+            SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
+        });
+
+        return new TableData<UserFlagDto>
+        {
+            Items = response.Data,
+            TotalItems = response.TotalCount,
+        };
+    }
+
+    private async Task OnSearchChanged()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private async Task UnlockAsync(UserFlagDto user)
+    {
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Unlock User",
+            ["Message"] = $"Unlock user {user.UserId}?",
+            ["ConfirmText"] = "Unlock",
+        };
+
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Unlock User", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var response = await SettingApi.UnlockUserAsync(user.UserId);
+        Snackbar.Add(response.Message ?? "Unlock failed.", response.Success ? Severity.Success : Severity.Error);
+        await ReloadAsync();
+    }
+
+    private async Task ResetPasswordAsync(UserFlagDto user)
+    {
+        var parameters = new DialogParameters { ["UserId"] = user.UserId };
+        var dialog = await DialogService.ShowAsync<ResetPasswordDialog>("Reset Password", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false })
+        {
+            await ReloadAsync();
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        if (_table != null)
+        {
+            await _table.ReloadServerData();
+        }
+    }
+
+    private static string ToYesNo(bool? value) => value == true ? "Yes" : "No";
+}

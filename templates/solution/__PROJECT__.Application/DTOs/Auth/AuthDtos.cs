@@ -40,7 +40,6 @@ public class UserResponseDto
 {
     public string UserId { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
-    public string? KodeCabang { get; set; }
     public string? FullName { get; set; }
     public string? RoleId { get; set; }
     public string? Email { get; set; }

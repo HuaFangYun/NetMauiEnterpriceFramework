@@ -857,9 +857,7 @@ public class ApprovalService : IApprovalService
         user.full_name = pending.full_name;
         user.email = pending.email;
         user.phone_number = pending.phone_number;
-        user.kode_cabang = pending.kode_cabang;
         user.gender_id = pending.gender_id;
-        user.nomor_induk_karyawan = pending.nomor_induk_karyawan;
     }
 
     private async Task<Dictionary<Guid, Dictionary<string, string?>>> LoadDetailsAsync(IEnumerable<Guid> ids)

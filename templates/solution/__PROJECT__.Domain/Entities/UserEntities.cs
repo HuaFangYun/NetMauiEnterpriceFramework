@@ -19,14 +19,8 @@ public partial class um_user_app : BaseEntity
     [StringLength(20)]
     public string? phone_number { get; set; }
 
-    [StringLength(20)]
-    public string? kode_cabang { get; set; }
-
     [StringLength(1)]
     public string? gender_id { get; set; }
-
-    [StringLength(20)]
-    public string? nomor_induk_karyawan { get; set; }
 
     public DateTime? last_password_change_date { get; set; }
 }

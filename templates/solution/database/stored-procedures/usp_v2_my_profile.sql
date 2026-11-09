@@ -7,9 +7,8 @@ AS
 BEGIN
     SET NOCOUNT ON;
     SELECT u.user_id AS UserId, u.full_name AS FullName, u.email AS Email,
-           u.phone_number AS PhoneNumber, u.kode_cabang AS KodeCabang,
+           u.phone_number AS PhoneNumber,
            u.gender_id AS GenderId, e.gender_name AS GenderName,
-           u.nomor_induk_karyawan AS NomorIndukKaryawan,
            ug.group_id AS GroupId, g.group_name AS GroupName,
            u.is_active AS IsActive, u.status_approval AS StatusApproval
     FROM dbo.um_user_app u

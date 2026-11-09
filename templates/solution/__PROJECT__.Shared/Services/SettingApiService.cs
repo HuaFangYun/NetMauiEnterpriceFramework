@@ -18,6 +18,17 @@ public class SettingApiService
         => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<UserListItemDto>>("api/user/list", request)
            ?? new GeneralListResponseDto<UserListItemDto>();
 
+    public async Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagsAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<UserFlagDto>>("api/user/list-user-flag", request)
+           ?? new GeneralListResponseDto<UserFlagDto>();
+
+    public async Task<BaseGeneralResponse> ResetUserPasswordAsync(string userId, string newPassword)
+        => await ReadAsync(await _api.PostAsync("api/user/reset-password", new UserActionDto
+        {
+            UserId = userId,
+            NewPassword = newPassword,
+        }));
+
     public Task<UserEditDto?> GetUserAsync(string userId)
         => _api.GetFromJsonAsync<UserEditDto>($"api/user/{Uri.EscapeDataString(userId)}");
 

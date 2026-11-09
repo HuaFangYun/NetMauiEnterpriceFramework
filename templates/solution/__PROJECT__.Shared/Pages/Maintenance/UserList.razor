@@ -1,6 +1,7 @@
 @page "/dashboard/maintenance/user-list"
 @layout AuthenticatedLayout
 @attribute [Authorize]
+@attribute [Authorize(Roles = "00")]
 @inject SettingApiService SettingApi
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
@@ -48,8 +49,6 @@
         <HeaderContent>
             <MudTh Style="text-align:center;">Actions</MudTh>
             <MudTh>User Id</MudTh>
-            <MudTh>Nomor Induk Karyawan</MudTh>
-            <MudTh>Branch</MudTh>
             <MudTh>Full Name</MudTh>
             <MudTh>Gender</MudTh>
             <MudTh>Email</MudTh>
@@ -63,8 +62,6 @@
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Color="Color.Error" OnClick="@(_ => DeleteAsync(context))" />
             </MudTd>
             <MudTd DataLabel="User Id">@context.UserId</MudTd>
-            <MudTd DataLabel="Nomor Induk Karyawan">@context.NomorIndukKaryawan</MudTd>
-            <MudTd DataLabel="Branch">@context.KodeCabang</MudTd>
             <MudTd DataLabel="Full Name">@context.FullName</MudTd>
             <MudTd DataLabel="Gender">@context.GenderName</MudTd>
             <MudTd DataLabel="Email">@context.Email</MudTd>
