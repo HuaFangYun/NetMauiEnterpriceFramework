@@ -8,8 +8,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject TabStateService TabService
-@inject ApiService ApiService
-@inject ITokenStorage TokenStorage
+@inject ExportApiService ExportApi
 
 @if (!IsCardsView)
 {
@@ -361,23 +360,27 @@
 
     private async Task ExportMakerAsync()
     {
-        var baseAddress = ApiService.ApiBaseAddress;
-        if (string.IsNullOrWhiteSpace(baseAddress) || string.IsNullOrWhiteSpace(TableName))
+        if (string.IsNullOrWhiteSpace(TableName))
         {
-            Snackbar.Add("API address or table is not available.", Severity.Error);
+            Snackbar.Add("Table is not available.", Severity.Error);
             return;
         }
 
         _exporting = true;
         try
         {
-            var token = await TokenStorage.GetAccessTokenAsync();
-            var query = $"?access_token={Uri.EscapeDataString(token ?? string.Empty)}";
-            if (!string.IsNullOrWhiteSpace(_search))
+            var url = await ExportApi.ExportManagementAsync("api/export/parameters", _search, TableName);
+            if (string.IsNullOrWhiteSpace(url))
             {
-                query += $"&search={Uri.EscapeDataString(_search)}";
+                Snackbar.Add("Export failed. Please try again.", Severity.Error);
+                return;
             }
-            Navigation.NavigateTo($"{baseAddress}/api/parameter/{Uri.EscapeDataString(TableName)}/export{query}", forceLoad: true);
+
+            Navigation.NavigateTo(url, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
         }
         finally
         {

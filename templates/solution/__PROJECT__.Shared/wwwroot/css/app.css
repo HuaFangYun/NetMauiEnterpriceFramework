@@ -895,7 +895,7 @@ html, body {
     max-width: none;
     overflow: visible;
     text-overflow: clip;
-    animation: sidebar-marquee 6s linear infinite;
+    animation: sidebar-marquee 2.5s linear infinite;
 }
 
 .sidebar-arrow {

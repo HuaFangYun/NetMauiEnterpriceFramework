@@ -74,10 +74,12 @@ builder.Services.AddScoped<IParameterEngineService, ParameterEngineService>();
 builder.Services.AddScoped<IDynamicEngineService, DynamicEngineService>();
 builder.Services.AddScoped<IScreenMenuEditorService, ScreenMenuEditorService>();
 builder.Services.AddScoped<IUserSessionNotifier, UserSessionNotifier>();
+builder.Services.AddScoped<IErrorLogService, ErrorLogService>();
 builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ExcelExportJob>();
 builder.Services.AddScoped<PdfExportJob>();
+builder.Services.AddScoped<ManagementExportJob>();
 builder.Services.AddScoped<IDropDownService, DropDownService>();
 builder.Services.AddScoped<IJWTService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
@@ -202,6 +204,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseSerilogRequestLogging();
+app.UseMiddleware<ApiExceptionMiddleware>();
 app.UseHttpsRedirection();
 app.UseRouting();
 app.UseCors("AppClient");

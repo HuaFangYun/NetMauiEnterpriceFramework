@@ -12,17 +12,20 @@ public class ExcelExportJob
 {
     private readonly IDynamicEngineService _dynamicEngine;
     private readonly INotificationService _notificationService;
+    private readonly IErrorLogService _errorLog;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<ExcelExportJob> _logger;
 
     public ExcelExportJob(
         IDynamicEngineService dynamicEngine,
         INotificationService notificationService,
+        IErrorLogService errorLog,
         IWebHostEnvironment environment,
         ILogger<ExcelExportJob> logger)
     {
         _dynamicEngine = dynamicEngine;
         _notificationService = notificationService;
+        _errorLog = errorLog;
         _environment = environment;
         _logger = logger;
     }
@@ -43,6 +46,7 @@ public class ExcelExportJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Report export failed for {ReportId}", reportId);
+            await _errorLog.LogAsync("ExportReport", "ERROR", ex, userId);
         }
     }
 
@@ -62,6 +66,7 @@ public class ExcelExportJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Screen export failed for {ScreenId}", screenId);
+            await _errorLog.LogAsync("ExportScreen", "ERROR", ex, userId);
         }
     }
 

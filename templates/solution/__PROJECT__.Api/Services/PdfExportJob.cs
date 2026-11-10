@@ -14,17 +14,20 @@ public class PdfExportJob
 {
     private readonly IDynamicEngineService _dynamicEngine;
     private readonly INotificationService _notificationService;
+    private readonly IErrorLogService _errorLog;
     private readonly IWebHostEnvironment _environment;
     private readonly ILogger<PdfExportJob> _logger;
 
     public PdfExportJob(
         IDynamicEngineService dynamicEngine,
         INotificationService notificationService,
+        IErrorLogService errorLog,
         IWebHostEnvironment environment,
         ILogger<PdfExportJob> logger)
     {
         _dynamicEngine = dynamicEngine;
         _notificationService = notificationService;
+        _errorLog = errorLog;
         _environment = environment;
         _logger = logger;
     }
@@ -45,6 +48,7 @@ public class PdfExportJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Report PDF export failed for {ReportId}", reportId);
+            await _errorLog.LogAsync("ExportPdfReport", "ERROR", ex, userId);
         }
     }
 
@@ -64,6 +68,7 @@ public class PdfExportJob
         catch (Exception ex)
         {
             _logger.LogError(ex, "Screen PDF export failed for {ScreenId}", screenId);
+            await _errorLog.LogAsync("ExportPdfScreen", "ERROR", ex, userId);
         }
     }
 

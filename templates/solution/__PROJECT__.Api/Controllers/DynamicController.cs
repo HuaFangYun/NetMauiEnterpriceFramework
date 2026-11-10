@@ -16,8 +16,13 @@ namespace __PROJECT__.Api.Controllers;
 public class DynamicController : ControllerBase
 {
     private readonly IDynamicEngineService _dynamicService;
+    private readonly IErrorLogService _errorLog;
 
-    public DynamicController(IDynamicEngineService dynamicService) => _dynamicService = dynamicService;
+    public DynamicController(IDynamicEngineService dynamicService, IErrorLogService errorLog)
+    {
+        _dynamicService = dynamicService;
+        _errorLog = errorLog;
+    }
 
     [HttpGet("screen/{screenId}")]
     public async Task<IActionResult> GetScreen(string screenId)
@@ -48,6 +53,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<DynamicLoadResultDto>(ex.Message));
         }
     }
@@ -67,6 +73,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<List<DynamicOptionDto>>(ex.Message));
         }
     }
@@ -88,6 +95,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<Dictionary<string, object?>>(ex.Message));
         }
     }
@@ -163,6 +171,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<string>(ex.Message));
         }
     }
@@ -190,6 +199,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<DynamicLoadResultDto>(ex.Message));
         }
     }

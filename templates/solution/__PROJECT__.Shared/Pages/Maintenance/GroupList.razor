@@ -5,8 +5,7 @@
 @inject SettingApiService SettingApi
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
-@inject ApiService ApiService
-@inject ITokenStorage TokenStorage
+@inject ExportApiService ExportApi
 @inject NavigationManager Navigation
 
 <MudBreadcrumbs Items="_breadcrumbs" Separator=">" Class="mb-3" />
@@ -163,23 +162,21 @@
 
     private async Task ExportExcelAsync()
     {
-        var baseAddress = ApiService.ApiBaseAddress;
-        if (string.IsNullOrWhiteSpace(baseAddress))
-        {
-            Snackbar.Add("API address is not available.", Severity.Error);
-            return;
-        }
-
         _isExporting = true;
         try
         {
-            var token = await TokenStorage.GetAccessTokenAsync();
-            var query = $"?access_token={Uri.EscapeDataString(token ?? string.Empty)}";
-            if (!string.IsNullOrWhiteSpace(_search))
+            var url = await ExportApi.ExportManagementAsync("api/export/groups", _search);
+            if (string.IsNullOrWhiteSpace(url))
             {
-                query += $"&search={Uri.EscapeDataString(_search)}";
+                Snackbar.Add("Export failed. Please try again.", Severity.Error);
+                return;
             }
-            Navigation.NavigateTo($"{baseAddress}/api/group/export{query}", forceLoad: true);
+
+            Navigation.NavigateTo(url, forceLoad: true);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
         }
         finally
         {
