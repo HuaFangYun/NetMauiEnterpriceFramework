@@ -72,7 +72,7 @@
                             <MudTextField @bind-Value="_child.Description" Label="Description" Variant="Variant.Outlined" />
                         </MudItem>
                         <MudItem xs="12" md="3">
-                            <MudSelect T="string" @bind-Value="_child.Type" Label="Type" Variant="Variant.Outlined">
+                            <MudSelect T="string" @bind-Value="_child.Type" Label="Type" Variant="Variant.Outlined" Clearable="true">
                                 <MudSelectItem Value="@("modal")">modal</MudSelectItem>
                                 <MudSelectItem Value="@("url")">url</MudSelectItem>
                             </MudSelect>

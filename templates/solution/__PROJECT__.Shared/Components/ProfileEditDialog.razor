@@ -9,7 +9,7 @@
         <MudTextField @bind-Value="_fullName" Label="Full Name" Variant="Variant.Outlined" Required="true" />
         <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined" InputType="InputType.Email" />
         <MudTextField @bind-Value="_phoneNumber" Label="Phone Number" Variant="Variant.Outlined" />
-        <MudSelect T="string" @bind-Value="_genderId" Label="Gender" Variant="Variant.Outlined" Class="mt-4">
+        <MudSelect T="string" @bind-Value="_genderId" Label="Gender" Variant="Variant.Outlined" Class="mt-4" Clearable="true">
             <MudSelectItem Value="@("L")">Laki-Laki</MudSelectItem>
             <MudSelectItem Value="@("P")">Perempuan</MudSelectItem>
         </MudSelect>

@@ -77,7 +77,7 @@
             }
 
             <MudItem xs="12" md="4">
-                <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                     @foreach (var column in Columns)
                     {
                         <MudSelectItem Value="@column">@column</MudSelectItem>
@@ -85,7 +85,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="4">
-                <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                     <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
                     <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
                 </MudSelect>

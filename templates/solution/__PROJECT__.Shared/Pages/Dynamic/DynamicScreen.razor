@@ -18,9 +18,6 @@
         <h1>@(_screen?.Description ?? ScreenId)</h1>
         <p>Metadata-driven screen from <code>tb_screen_menu</code>.</p>
     </div>
-    <div class="d-flex gap-2">
-        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(_ => LoadAsync())">Refresh</MudButton>
-    </div>
 </div>
 
 @if (_error != null)
@@ -83,7 +80,7 @@
                 }
 
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                         @foreach (var column in Columns)
                         {
                             <MudSelectItem Value="@column">@column</MudSelectItem>
@@ -91,7 +88,7 @@
                     </MudSelect>
                 </MudItem>
                 <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                    <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense" Clearable="true">
                         <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
                         <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
                     </MudSelect>

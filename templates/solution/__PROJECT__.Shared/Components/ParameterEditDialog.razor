@@ -35,7 +35,8 @@
                                    Variant="Variant.Outlined"
                                    Required="@field.IsMandatory"
                                    Disabled="@(IsEdit && field.IsKey)"
-                                   FullWidth="true">
+                                   FullWidth="true"
+                                   Clearable="true">
                             @foreach (var option in options)
                             {
                                 <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>

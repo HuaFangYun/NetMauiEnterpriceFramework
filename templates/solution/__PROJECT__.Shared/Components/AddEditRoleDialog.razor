@@ -8,7 +8,7 @@
     <DialogContent>
         <MudGrid Spacing="3">
             <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.UserId" Label="User" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit">
+                <MudSelect T="string" @bind-Value="_model.UserId" Label="User" Variant="Variant.Outlined" Required="true" Disabled="@IsEdit" Clearable="true">
                     @foreach (var user in _users)
                     {
                         <MudSelectItem Value="@user.Value">@user.Text</MudSelectItem>
@@ -16,7 +16,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.GroupId" Label="Group" Variant="Variant.Outlined" Required="true">
+                <MudSelect T="string" @bind-Value="_model.GroupId" Label="Group" Variant="Variant.Outlined" Required="true" Clearable="true">
                     @foreach (var group in _groups)
                     {
                         <MudSelectItem Value="@group.Value">@group.Text</MudSelectItem>

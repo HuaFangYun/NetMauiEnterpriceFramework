@@ -20,7 +20,7 @@
                 <MudTextField @bind-Value="_model.ComponentType" Label="Component Type" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.ParentLevelId" Label="Parent Level" Variant="Variant.Outlined">
+                <MudSelect T="string" @bind-Value="_model.ParentLevelId" Label="Parent Level" Variant="Variant.Outlined" Clearable="true">
                     @foreach (var level in _levels)
                     {
                         <MudSelectItem Value="@level.Value">@level.Text</MudSelectItem>
@@ -28,7 +28,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.MenuUniqueParent" Label="Parent Menu" Variant="Variant.Outlined">
+                <MudSelect T="string" @bind-Value="_model.MenuUniqueParent" Label="Parent Menu" Variant="Variant.Outlined" Clearable="true">
                     <MudSelectItem Value="@string.Empty">— No parent —</MudSelectItem>
                     @foreach (var parent in _parentMenus)
                     {
@@ -37,7 +37,7 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" md="6">
-                <MudSelect T="string" @bind-Value="_model.MenuIcon" Label="Icon" Variant="Variant.Outlined">
+                <MudSelect T="string" @bind-Value="_model.MenuIcon" Label="Icon" Variant="Variant.Outlined" Clearable="true">
                     @foreach (var icon in _icons)
                     {
                         <MudSelectItem Value="@icon.Value">@icon.Text</MudSelectItem>

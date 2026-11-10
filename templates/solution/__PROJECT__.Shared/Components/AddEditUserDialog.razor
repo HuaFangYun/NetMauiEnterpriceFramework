@@ -28,7 +28,7 @@
                                @bind-Value="_model.GenderId"
                                Label="Gender"
                                Variant="Variant.Text"
-                               Required="true">
+                               Required="true" Clearable="true">
                         @foreach (var gender in _genders)
                         {
                             <MudSelectItem Value="@gender.Value">@gender.Text</MudSelectItem>
