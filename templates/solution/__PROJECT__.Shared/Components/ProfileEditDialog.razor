@@ -1,0 +1,84 @@
+@inject AuthService AuthService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Edit Profile</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudTextField @bind-Value="_fullName" Label="Full Name" Variant="Variant.Outlined" Required="true" />
+        <MudTextField @bind-Value="_email" Label="Email" Variant="Variant.Outlined" InputType="InputType.Email" />
+        <MudTextField @bind-Value="_phoneNumber" Label="Phone Number" Variant="Variant.Outlined" />
+        <MudSelect T="string" @bind-Value="_genderId" Label="Gender" Variant="Variant.Outlined" Class="mt-4">
+            <MudSelectItem Value="@("L")">Laki-Laki</MudSelectItem>
+            <MudSelectItem Value="@("P")">Perempuan</MudSelectItem>
+        </MudSelect>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="SaveAsync">
+            @(_saving ? "Saving..." : "Save Changes")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public UserResponseDto User { get; set; } = new();
+
+    private string? _fullName;
+    private string? _email;
+    private string? _phoneNumber;
+    private string? _genderId;
+    private bool _saving;
+
+    protected override void OnInitialized()
+    {
+        _fullName = User.FullName;
+        _email = User.Email;
+        _phoneNumber = User.PhoneNumber;
+        _genderId = User.GenderId;
+    }
+
+    private async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_fullName))
+        {
+            Snackbar.Add("Full name is required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = await AuthService.UpdateProfileAsync(new UpdateProfileDto
+            {
+                FullName = _fullName,
+                Email = _email,
+                PhoneNumber = _phoneNumber,
+                GenderId = _genderId,
+            });
+
+            if (result != null)
+            {
+                Snackbar.Add("Profile updated successfully.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                Snackbar.Add("Profile update failed.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

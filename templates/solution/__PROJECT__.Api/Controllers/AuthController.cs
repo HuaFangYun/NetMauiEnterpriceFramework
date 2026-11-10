@@ -78,6 +78,27 @@ public class AuthController : ControllerBase
         return user == null ? NotFound() : Ok(user);
     }
 
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileDto request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+        {
+            return Unauthorized();
+        }
+
+        try
+        {
+            var user = await _authService.UpdateProfileAsync(userId, request);
+            return user == null ? NotFound() : Ok(user);
+        }
+        catch (AuthenticationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPost("change-password")]
     [Authorize]
     public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordDto request)

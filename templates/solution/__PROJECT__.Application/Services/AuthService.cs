@@ -207,6 +207,25 @@ public class AuthService : IAuthService
         return user == null ? null : await MapToUserDto(user);
     }
 
+    public async Task<UserResponseDto?> UpdateProfileAsync(string userId, UpdateProfileDto request)
+    {
+        var user = await _unitOfWork.UmUserApp.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new AuthenticationException("User not found.");
+        }
+
+        user.full_name = request.FullName;
+        user.email = request.Email;
+        user.phone_number = request.PhoneNumber;
+        user.gender_id = request.GenderId;
+        user.modifiedDate = DateTime.Now;
+        await _unitOfWork.UmUserApp.UpdateAsync(user);
+        await _unitOfWork.SaveChangesAsync();
+
+        return await MapToUserDto(user);
+    }
+
     public async Task ChangePasswordAsync(string userId, ChangePasswordDto request)
     {
         var user = await _unitOfWork.UmUserApp.GetByIdAsync(userId);
@@ -244,14 +263,29 @@ public class AuthService : IAuthService
     private async Task<UserResponseDto> MapToUserDto(um_user_app user)
     {
         var userGroup = await _unitOfWork.UmUserGroup.GetByIdAsync(user.user_id);
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(user.user_id);
+        var roleName = userGroup?.group_id == null
+            ? null
+            : await _unitOfWork.UmUserGroup.GetGroupNameAsync(userGroup.group_id);
+
+        var isSuperAdmin = string.Equals(userGroup?.group_id, "00", StringComparison.Ordinal);
+
         return new UserResponseDto
         {
             UserId = user.user_id,
             UserName = user.user_id,
             FullName = user.full_name,
             RoleId = userGroup?.group_id,
+            RoleName = roleName,
             Email = user.email,
-            LastLoginDate = DateTime.Now,
+            PhoneNumber = user.phone_number,
+            GenderId = user.gender_id,
+            LastLoginDate = flag?.last_login_date ?? DateTime.Now,
+            LastPasswordChangeDate = user.last_password_change_date,
+            LastIpAddress = flag?.ip_address,
+            CanAddEdit = isSuperAdmin || userGroup?.can_add_edit == true,
+            CanDelete = userGroup?.can_delete == true,
+            CanReadOnly = userGroup?.can_read_only == true,
             IsActive = user.isActive == true,
         };
     }

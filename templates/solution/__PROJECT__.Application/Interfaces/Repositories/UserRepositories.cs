@@ -12,6 +12,7 @@ public interface IUmUserAppRepository
 public interface IUmUserGroupRepository
 {
     Task<um_user_group?> GetByIdAsync(string userId);
+    Task<string?> GetGroupNameAsync(string groupId);
 }
 
 public interface IUmUserAppFlagRepository

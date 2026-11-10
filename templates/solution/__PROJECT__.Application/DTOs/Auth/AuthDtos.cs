@@ -36,13 +36,29 @@ public class ChangePasswordDto
     public string ConfirmNewPassword { get; set; } = string.Empty;
 }
 
+public class UpdateProfileDto
+{
+    public string? FullName { get; set; }
+    public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? GenderId { get; set; }
+}
+
 public class UserResponseDto
 {
     public string UserId { get; set; } = string.Empty;
     public string UserName { get; set; } = string.Empty;
     public string? FullName { get; set; }
     public string? RoleId { get; set; }
+    public string? RoleName { get; set; }
     public string? Email { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? GenderId { get; set; }
     public DateTime LastLoginDate { get; set; }
+    public DateTime? LastPasswordChangeDate { get; set; }
+    public string? LastIpAddress { get; set; }
+    public bool CanAddEdit { get; set; }
+    public bool CanDelete { get; set; }
+    public bool CanReadOnly { get; set; }
     public bool IsActive { get; set; }
 }

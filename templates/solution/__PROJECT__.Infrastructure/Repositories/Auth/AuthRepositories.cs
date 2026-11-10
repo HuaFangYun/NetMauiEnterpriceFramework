@@ -33,6 +33,12 @@ public class UmUserGroupRepository : IUmUserGroupRepository
 
     public Task<um_user_group?> GetByIdAsync(string userId)
         => _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == userId);
+
+    public Task<string?> GetGroupNameAsync(string groupId)
+        => _context.um_group_app
+            .Where(e => e.group_id == groupId && e.isDeleted != true)
+            .Select(e => e.group_name)
+            .FirstOrDefaultAsync();
 }
 
 public class UmUserAppFlagRepository : IUmUserAppFlagRepository

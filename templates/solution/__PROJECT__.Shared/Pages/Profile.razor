@@ -2,40 +2,172 @@
 @layout AuthenticatedLayout
 @attribute [Authorize]
 @inject AuthService AuthService
+@inject IDialogService DialogService
+@inject TabStateService TabService
 
-<MudContainer MaxWidth="MaxWidth.Medium" Class="pa-0">
-    <MudPaper Elevation="0" Class="dashboard-card">
-        <div class="page-heading">
+<MudBreadcrumbs Items="_breadcrumbs" Separator=">" Class="mb-3" />
+
+@if (_user == null)
+{
+    <MudAlert Severity="Severity.Info">Profile is not available.</MudAlert>
+}
+else
+{
+    <MudPaper Elevation="0" Class="profile-header-card">
+        <div class="profile-identity">
+            <div class="profile-avatar">@Initials</div>
             <div>
-                <div class="dashboard-kicker">Account</div>
-                <h1>Profile</h1>
-                <p>Your account information.</p>
+                <h1>@_user.FullName</h1>
+                <div class="profile-role">@RoleName</div>
+                <div class="d-flex align-center flex-wrap gap-2 mt-2">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Verified Account</MudChip>
+                    <MudChip T="string" Size="Size.Small" Color="Color.Default" Variant="Variant.Outlined">ID: @_user.UserId</MudChip>
+                </div>
             </div>
-            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" Color="Color.Primary" Style="font-size:48px;" />
         </div>
-
-        @if (_user == null)
-        {
-            <MudAlert Severity="Severity.Info">Profile is not available.</MudAlert>
-        }
-        else
-        {
-            <MudGrid Spacing="3">
-                <MudItem xs="12" md="6"><div class="profile-label">User ID</div><div class="profile-value">@_user.UserId</div></MudItem>
-                <MudItem xs="12" md="6"><div class="profile-label">Full Name</div><div class="profile-value">@_user.FullName</div></MudItem>
-                <MudItem xs="12" md="6"><div class="profile-label">Email</div><div class="profile-value">@_user.Email</div></MudItem>
-                <MudItem xs="12" md="6"><div class="profile-label">Role</div><div class="profile-value">@_user.RoleId</div></MudItem>
-                <MudItem xs="12" md="6"><div class="profile-label">Status</div><div class="profile-value">@(_user.IsActive ? "Active" : "Inactive")</div></MudItem>
-            </MudGrid>
-        }
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Edit" OnClick="EditProfileAsync">Edit Profile</MudButton>
     </MudPaper>
-</MudContainer>
+
+    <MudGrid Spacing="3" Class="mt-1">
+        <MudItem xs="12" md="7">
+            <MudPaper Elevation="0" Class="profile-panel">
+                <div class="profile-panel-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Personal Details</MudText>
+                </div>
+
+                <MudGrid Spacing="3" Class="mt-1">
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">Email Address</div>
+                        <div class="profile-value">@_user.Email</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">Phone Number</div>
+                        <div class="profile-value">@(_user.PhoneNumber ?? "-")</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">Gender</div>
+                        <div class="profile-value">@GenderName</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">Role</div>
+                        <div class="profile-value">@RoleName</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">User ID</div>
+                        <div class="profile-value">@_user.UserId</div>
+                    </MudItem>
+                    <MudItem xs="12" sm="6">
+                        <div class="profile-label">Status</div>
+                        <div class="profile-value">
+                            <MudChip T="string" Size="Size.Small" Color="@(_user.IsActive ? Color.Success : Color.Default)">
+                                @(_user.IsActive ? "Active" : "Inactive")
+                            </MudChip>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="5">
+            <MudPaper Elevation="0" Class="profile-panel">
+                <div class="profile-panel-title">
+                    <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" />
+                    <MudText Typo="Typo.h6">Account Security</MudText>
+                    <MudSpacer />
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Size="Size.Small" StartIcon="@Icons.Material.Filled.Lock" OnClick="OpenChangePassword">Change Password</MudButton>
+                </div>
+
+                <div class="profile-security-block">
+                    <div class="profile-label">Password Status</div>
+                    <div class="profile-value">Last updated: @(_user.LastPasswordChangeDate?.ToString("dd MMM yyyy HH:mm") ?? "-")</div>
+                </div>
+
+                <div class="profile-security-block">
+                    <div class="profile-label mb-2">Access Rights</div>
+                    <div class="d-flex flex-column gap-2">
+                        <MudSwitch T="bool" Value="_user.CanAddEdit" Disabled="true" Color="Color.Primary" Label="Add / Edit" />
+                        <MudSwitch T="bool" Value="_user.CanDelete" Disabled="true" Color="Color.Primary" Label="Delete" />
+                        <MudSwitch T="bool" Value="_user.CanReadOnly" Disabled="true" Color="Color.Primary" Label="Read Only" />
+                    </div>
+                </div>
+
+                <div class="profile-security-block">
+                    <div class="profile-label">Last Login</div>
+                    <div class="profile-value">@_user.LastLoginDate.ToString("dd MMM yyyy HH:mm")</div>
+                </div>
+
+                <div class="profile-security-block">
+                    <div class="profile-label">Last IP Access</div>
+                    <div class="profile-value">@(_user.LastIpAddress ?? "-")</div>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
+    private const string ChangePasswordComponent = "__PROJECT__.Shared.Pages.ChangePassword, __PROJECT__.Shared";
+
+    private readonly List<BreadcrumbItem> _breadcrumbs =
+    [
+        new("Dashboard", href: "/dashboard"),
+        new("Account", href: null),
+        new("Profile", href: null, disabled: true),
+    ];
+
     private UserResponseDto? _user;
+
+    private string Initials
+    {
+        get
+        {
+            var source = _user?.FullName ?? _user?.UserId;
+            if (string.IsNullOrWhiteSpace(source))
+            {
+                return "?";
+            }
+
+            return string.Concat(source
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+                .Take(2)
+                .Select(part => char.ToUpperInvariant(part[0])));
+        }
+    }
+
+    private string RoleName => _user?.RoleName ?? _user?.RoleId ?? "-";
+
+    private string GenderName => _user?.GenderId?.ToUpperInvariant() switch
+    {
+        "L" => "Laki-Laki",
+        "P" => "Perempuan",
+        _ => _user?.GenderId ?? "-",
+    };
 
     protected override async Task OnInitializedAsync()
     {
         _user = await AuthService.GetCurrentUserAsync();
+    }
+
+    private async Task EditProfileAsync()
+    {
+        if (_user == null)
+        {
+            return;
+        }
+
+        var parameters = new DialogParameters { ["User"] = _user };
+        var dialog = await DialogService.ShowAsync<ProfileEditDialog>("Edit Profile", parameters);
+        var result = await dialog.Result;
+        if (result is { Canceled: false, Data: UserResponseDto updated })
+        {
+            _user = updated;
+            StateHasChanged();
+        }
+    }
+
+    private void OpenChangePassword()
+    {
+        TabService.OpenTab("Change Password", ChangePasswordComponent, "/change-password", icon: "Lock");
     }
 }

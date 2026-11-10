@@ -345,7 +345,8 @@
             $"{card.Description} Maker",
             ParameterComponent,
             $"/dashboard/maintenance/parameter-system/maker/{card.TableName}",
-            new Dictionary<string, object> { ["Mode"] = "maker", ["TableName"] = card.TableName });
+            new Dictionary<string, object> { ["Mode"] = "maker", ["TableName"] = card.TableName },
+            card.Icon);
     }
 
     private void OpenApproval(ParameterCardDto card)
@@ -354,7 +355,8 @@
             $"{card.Description} Approval",
             ParameterComponent,
             $"/dashboard/maintenance/parameter-system/approval/{card.TableName}",
-            new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.TableName });
+            new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.TableName },
+            card.Icon);
     }
 
     private async Task ExportMakerAsync()

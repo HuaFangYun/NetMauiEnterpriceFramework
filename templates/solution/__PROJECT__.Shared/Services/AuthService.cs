@@ -54,6 +54,23 @@ public class AuthService
         return await response.Content.ReadFromJsonAsync<UserResponseDto>();
     }
 
+    public async Task<UserResponseDto?> UpdateProfileAsync(UpdateProfileDto request)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Put, "api/auth/profile")
+        {
+            Content = JsonContent.Create(request),
+        };
+        await AttachTokenAsync(message);
+
+        var response = await _httpClient.SendAsync(message);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(await ReadErrorAsync(response));
+        }
+
+        return await response.Content.ReadFromJsonAsync<UserResponseDto>();
+    }
+
     public async Task ChangePasswordAsync(ChangePasswordDto request)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "api/auth/change-password")

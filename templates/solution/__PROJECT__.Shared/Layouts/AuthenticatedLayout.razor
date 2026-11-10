@@ -110,7 +110,6 @@
             </ActivatorContent>
             <ChildContent>
                 <MudMenuItem OnClick="@(_ => OpenProfile())">Profile</MudMenuItem>
-                <MudMenuItem OnClick="@(_ => OpenChangePassword())">Change Password</MudMenuItem>
                 <MudDivider />
                 <MudMenuItem OnClick="@(_ => LogoutAsync())">Logout</MudMenuItem>
             </ChildContent>
@@ -190,7 +189,6 @@
     private const string BrandName = "__PROJECT__";
     private const string DashboardComponent = "__PROJECT__.Shared.Pages.Dashboard, __PROJECT__.Shared";
     private const string ProfileComponent = "__PROJECT__.Shared.Pages.Profile, __PROJECT__.Shared";
-    private const string ChangePasswordComponent = "__PROJECT__.Shared.Pages.ChangePassword, __PROJECT__.Shared";
     private const string NotificationsComponent = "__PROJECT__.Shared.Pages.Notifications, __PROJECT__.Shared";
 
     private bool _drawerOpen = true;
@@ -422,9 +420,6 @@
 
     private void OpenProfile()
         => TabService.OpenTab("Profile", ProfileComponent, "/profile", icon: "Person");
-
-    private void OpenChangePassword()
-        => TabService.OpenTab("Change Password", ChangePasswordComponent, "/change-password", icon: "Lock");
 
     private void RefreshTab(AppTabDto tab) => TabService.RefreshTab(tab);
 
