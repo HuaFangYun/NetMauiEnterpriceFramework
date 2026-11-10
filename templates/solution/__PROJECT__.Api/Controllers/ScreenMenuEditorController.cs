@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.Screen;
 using __PROJECT__.Application.Interfaces;
@@ -19,19 +20,25 @@ public class ScreenMenuEditorController : ControllerBase
 
     [HttpPost("list")]
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
-        => Ok(await _screenMenuService.GetListAsync(request));
+    {
+        var result = await _screenMenuService.GetListAsync(request);
+        return Ok(ApiResponseFactory.Page(result.Data, request, result.TotalCount, "Screens retrieved successfully"));
+    }
 
     [HttpGet("{id}")]
     public async Task<IActionResult> Get(string id)
     {
         var screen = await _screenMenuService.GetAsync(id);
-        return screen == null ? NotFound() : Ok(screen);
+        return screen == null
+            ? NotFound(ApiResponseFactory.NotFound<ScreenMenuEditDto>("Screen not found."))
+            : Ok(ApiResponseFactory.Success(screen, "Screen retrieved successfully"));
     }
 
     [HttpPost]
     public async Task<IActionResult> Stage([FromBody] ScreenMenuEditDto dto)
     {
         var result = await _screenMenuService.StageAsync(dto);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

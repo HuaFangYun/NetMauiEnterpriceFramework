@@ -3,26 +3,41 @@
 
 @if (Item.Children is { Count: > 0 })
 {
-    <MudNavGroup Title="@Item.MenuName"
-                 Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)"
-                 Expanded="false">
-        @if (Item.Children.All(child => child.Children is not { Count: > 0 }))
+    <div class="sidebar-group @(_expanded ? "sidebar-group-open" : string.Empty)">
+        <button type="button"
+                class="sidebar-link sidebar-group-toggle"
+                aria-expanded="@_expanded"
+                @onclick="Toggle">
+            <MudIcon Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)" Class="sidebar-link-icon" />
+            <span class="sidebar-label" title="@Item.MenuName">
+                <span class="sidebar-label-text @LongLabelClass">@Item.MenuName</span>
+            </span>
+            <MudIcon Icon="@(_expanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Class="sidebar-arrow" />
+        </button>
+
+        @if (_expanded)
         {
-            <div class="menu-tile-grid">
-                @foreach (var child in Item.Children.OrderBy(c => c.OrderSeq))
+            <div class="sidebar-children">
+                @if (Item.Children.All(child => child.Children is not { Count: > 0 }))
                 {
-                    <RecursiveMenuItem Item="child" OnOpen="OnOpen" AsTile="true" />
+                    <div class="menu-tile-grid">
+                        @foreach (var child in Item.Children.OrderBy(c => c.OrderSeq))
+                        {
+                            <RecursiveMenuItem Item="child" OnOpen="OnOpen" AsTile="true" />
+                        }
+                    </div>
+                }
+                else
+                {
+                    @foreach (var child in Item.Children.OrderBy(c => c.OrderSeq))
+                    {
+                        <RecursiveMenuItem Item="child" OnOpen="OnOpen" />
+                    }
                 }
             </div>
         }
-        else
-        {
-            @foreach (var child in Item.Children.OrderBy(c => c.OrderSeq))
-            {
-                <RecursiveMenuItem Item="child" OnOpen="OnOpen" />
-            }
-        }
-    </MudNavGroup>
+    </div>
 }
 else if (AsTile)
 {
@@ -36,11 +51,15 @@ else if (AsTile)
 }
 else
 {
-    <MudNavLink Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)"
-                Disabled="@(string.IsNullOrWhiteSpace(Item.ComponentType))"
-                OnClick="@(_ => OnOpen.InvokeAsync(Item))">
-        @Item.MenuName
-    </MudNavLink>
+    <button type="button"
+            class="sidebar-link"
+            disabled="@(string.IsNullOrWhiteSpace(Item.ComponentType))"
+            @onclick="@(() => OnOpen.InvokeAsync(Item))">
+        <MudIcon Icon="@MenuIconResolver.GetIcon(Item.MenuIcon)" Class="sidebar-link-icon" />
+        <span class="sidebar-label" title="@Item.MenuName">
+            <span class="sidebar-label-text @LongLabelClass">@Item.MenuName</span>
+        </span>
+    </button>
 }
 
 @code {
@@ -52,4 +71,10 @@ else
 
     [Parameter]
     public bool AsTile { get; set; }
+
+    private bool _expanded;
+
+    private string? LongLabelClass => Item.MenuName.Length > 14 ? "sidebar-label-long" : null;
+
+    private void Toggle() => _expanded = !_expanded;
 }

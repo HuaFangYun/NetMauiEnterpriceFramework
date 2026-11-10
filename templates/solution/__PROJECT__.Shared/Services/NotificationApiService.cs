@@ -12,7 +12,7 @@ public class NotificationApiService
     public NotificationApiService(ApiService api) => _api = api;
 
     public async Task<List<NotificationDto>> GetRecentAsync(int top = 20)
-        => await _api.GetFromJsonAsync<List<NotificationDto>>($"api/notification/recent?top={top}")
+        => await _api.GetFromJsonAsync<List<NotificationDto>>($"api/notification/recent?top={top}", unwrap: true)
            ?? new List<NotificationDto>();
 
     public async Task<BaseGeneralResponse> MarkSeenAsync(long id)

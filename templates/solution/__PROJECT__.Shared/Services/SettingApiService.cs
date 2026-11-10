@@ -14,13 +14,13 @@ public class SettingApiService
 
     public SettingApiService(ApiService api) => _api = api;
 
-    public async Task<GeneralListResponseDto<UserListItemDto>> GetUsersAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<UserListItemDto>>("api/user/list", request)
-           ?? new GeneralListResponseDto<UserListItemDto>();
+    public async Task<PaginatedResponse<UserListItemDto>> GetUsersAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<UserListItemDto>>("api/user/list", request)
+           ?? new PaginatedResponse<UserListItemDto>();
 
-    public async Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagsAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<UserFlagDto>>("api/user/list-user-flag", request)
-           ?? new GeneralListResponseDto<UserFlagDto>();
+    public async Task<PaginatedResponse<UserFlagDto>> GetUserFlagsAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<UserFlagDto>>("api/user/list-user-flag", request)
+           ?? new PaginatedResponse<UserFlagDto>();
 
     public async Task<BaseGeneralResponse> ResetUserPasswordAsync(string userId, string newPassword)
         => await ReadAsync(await _api.PostAsync("api/user/reset-password", new UserActionDto
@@ -30,7 +30,7 @@ public class SettingApiService
         }));
 
     public Task<UserEditDto?> GetUserAsync(string userId)
-        => _api.GetFromJsonAsync<UserEditDto>($"api/user/{Uri.EscapeDataString(userId)}");
+        => _api.GetFromJsonAsync<UserEditDto>($"api/user/{Uri.EscapeDataString(userId)}", unwrap: true);
 
     public async Task<BaseGeneralResponse> CreateUserAsync(UserEditDto dto)
         => await ReadAsync(await _api.PostAsync("api/user", dto));
@@ -45,17 +45,17 @@ public class SettingApiService
         => await ReadAsync(await _api.PostAsync("api/user/unlock", new UserActionDto { UserId = userId }));
 
     public async Task<List<DropdownItemDto>> GetGroupsAsync()
-        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/groups") ?? new List<DropdownItemDto>();
+        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/groups", unwrap: true) ?? new List<DropdownItemDto>();
 
     public async Task<List<DropdownItemDto>> GetGendersAsync()
-        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/genders") ?? new List<DropdownItemDto>();
+        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/genders", unwrap: true) ?? new List<DropdownItemDto>();
 
-    public async Task<GeneralListResponseDto<GroupListItemDto>> GetGroupsAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<GroupListItemDto>>("api/group/list", request)
-           ?? new GeneralListResponseDto<GroupListItemDto>();
+    public async Task<PaginatedResponse<GroupListItemDto>> GetGroupsAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<GroupListItemDto>>("api/group/list", request)
+           ?? new PaginatedResponse<GroupListItemDto>();
 
     public Task<GroupEditDto?> GetGroupAsync(string groupId)
-        => _api.GetFromJsonAsync<GroupEditDto>($"api/group/{Uri.EscapeDataString(groupId)}");
+        => _api.GetFromJsonAsync<GroupEditDto>($"api/group/{Uri.EscapeDataString(groupId)}", unwrap: true);
 
     public async Task<BaseGeneralResponse> CreateGroupAsync(GroupEditDto dto)
         => await ReadAsync(await _api.PostAsync("api/group", dto));
@@ -66,12 +66,12 @@ public class SettingApiService
     public async Task<BaseGeneralResponse> DeleteGroupAsync(string groupId)
         => await ReadAsync(await _api.DeleteAsync($"api/group/{Uri.EscapeDataString(groupId)}"));
 
-    public async Task<GeneralListResponseDto<RoleListItemDto>> GetRolesAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<RoleListItemDto>>("api/usergroup/list", request)
-           ?? new GeneralListResponseDto<RoleListItemDto>();
+    public async Task<PaginatedResponse<RoleListItemDto>> GetRolesAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<RoleListItemDto>>("api/usergroup/list", request)
+           ?? new PaginatedResponse<RoleListItemDto>();
 
     public Task<RoleEditDto?> GetRoleAsync(string userId)
-        => _api.GetFromJsonAsync<RoleEditDto>($"api/usergroup/{Uri.EscapeDataString(userId)}");
+        => _api.GetFromJsonAsync<RoleEditDto>($"api/usergroup/{Uri.EscapeDataString(userId)}", unwrap: true);
 
     public async Task<BaseGeneralResponse> CreateRoleAsync(RoleEditDto dto)
         => await ReadAsync(await _api.PostAsync("api/usergroup", dto));
@@ -83,20 +83,20 @@ public class SettingApiService
         => await ReadAsync(await _api.DeleteAsync($"api/usergroup/{Uri.EscapeDataString(userId)}"));
 
     public async Task<List<DropdownItemDto>> GetUsersAsync()
-        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/users") ?? new List<DropdownItemDto>();
+        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/users", unwrap: true) ?? new List<DropdownItemDto>();
 
     public async Task<List<DropdownItemDto>> GetMenuIconsAsync()
-        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/menu-icons") ?? new List<DropdownItemDto>();
+        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/menu-icons", unwrap: true) ?? new List<DropdownItemDto>();
 
     public async Task<List<DropdownItemDto>> GetMenuParentLevelsAsync()
-        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/menu-parent-levels") ?? new List<DropdownItemDto>();
+        => await _api.GetFromJsonAsync<List<DropdownItemDto>>("api/dropdown/menu-parent-levels", unwrap: true) ?? new List<DropdownItemDto>();
 
-    public async Task<GeneralListResponseDto<MenuListItemDto>> GetMenusAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<MenuListItemDto>>("api/menu/list", request)
-           ?? new GeneralListResponseDto<MenuListItemDto>();
+    public async Task<PaginatedResponse<MenuListItemDto>> GetMenusAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<MenuListItemDto>>("api/menu/list", request)
+           ?? new PaginatedResponse<MenuListItemDto>();
 
     public Task<MenuEditDto?> GetMenuAsync(long id)
-        => _api.GetFromJsonAsync<MenuEditDto>($"api/menu/detail/{id}");
+        => _api.GetFromJsonAsync<MenuEditDto>($"api/menu/detail/{id}", unwrap: true);
 
     public async Task<BaseGeneralResponse> CreateMenuAsync(MenuEditDto dto)
         => await ReadAsync(await _api.PostAsync("api/menu", dto));
@@ -108,10 +108,10 @@ public class SettingApiService
         => await ReadAsync(await _api.DeleteAsync($"api/menu/{id}"));
 
     public async Task<List<MenuTreeItemDto>> GetMenuTreeAsync()
-        => await _api.GetFromJsonAsync<List<MenuTreeItemDto>>("api/menu/tree") ?? new List<MenuTreeItemDto>();
+        => await _api.GetFromJsonAsync<List<MenuTreeItemDto>>("api/menu/tree", unwrap: true) ?? new List<MenuTreeItemDto>();
 
     public async Task<List<long>> GetAssignedMenusAsync(string groupId)
-        => await _api.GetFromJsonAsync<List<long>>($"api/menu/assigned/{Uri.EscapeDataString(groupId)}") ?? new List<long>();
+        => await _api.GetFromJsonAsync<List<long>>($"api/menu/assigned/{Uri.EscapeDataString(groupId)}", unwrap: true) ?? new List<long>();
 
     public async Task<BaseGeneralResponse> SaveMenuMapAsync(MenuMapDto dto)
         => await ReadAsync(await _api.PostAsync("api/menu/save-map", dto));

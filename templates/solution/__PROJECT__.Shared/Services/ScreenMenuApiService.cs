@@ -11,13 +11,13 @@ public class ScreenMenuApiService
 
     public ScreenMenuApiService(ApiService api) => _api = api;
 
-    public async Task<GeneralListResponseDto<ScreenMenuListItemDto>> GetListAsync(DataTableRequestDto request)
-        => await _api.PostRawFromJsonAsync<DataTableRequestDto, GeneralListResponseDto<ScreenMenuListItemDto>>(
+    public async Task<PaginatedResponse<ScreenMenuListItemDto>> GetListAsync(DataTableRequestDto request)
+        => await _api.PostRawFromJsonAsync<DataTableRequestDto, PaginatedResponse<ScreenMenuListItemDto>>(
                "api/screen-menu-editor/list", request)
-           ?? new GeneralListResponseDto<ScreenMenuListItemDto>();
+           ?? new PaginatedResponse<ScreenMenuListItemDto>();
 
     public Task<ScreenMenuEditDto?> GetAsync(string id)
-        => _api.GetFromJsonAsync<ScreenMenuEditDto>($"api/screen-menu-editor/{Uri.EscapeDataString(id)}");
+        => _api.GetFromJsonAsync<ScreenMenuEditDto>($"api/screen-menu-editor/{Uri.EscapeDataString(id)}", unwrap: true);
 
     public async Task<BaseGeneralResponse> StageAsync(ScreenMenuEditDto dto)
         => await ReadAsync(await _api.PostAsync("api/screen-menu-editor", dto));

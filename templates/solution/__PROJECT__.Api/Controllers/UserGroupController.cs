@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.Role;
 using __PROJECT__.Application.Interfaces;
@@ -21,7 +22,10 @@ public class UserGroupController : ControllerBase
 
     [HttpPost("list")]
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
-        => Ok(await _roleService.GetListAsync(request));
+    {
+        var result = await _roleService.GetListAsync(request);
+        return Ok(ApiResponseFactory.Page(result.Data, request, result.TotalCount, "Roles retrieved successfully"));
+    }
 
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] string? search)
@@ -83,27 +87,26 @@ public class UserGroupController : ControllerBase
     public async Task<IActionResult> Get(string userId)
     {
         var role = await _roleService.GetByIdAsync(userId);
-        return role == null ? NotFound() : Ok(role);
+        return role == null
+            ? NotFound(ApiResponseFactory.NotFound<RoleEditDto>("Role not found."))
+            : Ok(ApiResponseFactory.Success(role, "Role retrieved successfully"));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] RoleEditDto dto)
-    {
-        var result = await _roleService.CreateAsync(dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _roleService.CreateAsync(dto));
 
     [HttpPut("{userId}")]
     public async Task<IActionResult> Update(string userId, [FromBody] RoleEditDto dto)
-    {
-        var result = await _roleService.UpdateAsync(userId, dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _roleService.UpdateAsync(userId, dto));
 
     [HttpDelete("{userId}")]
     public async Task<IActionResult> Delete(string userId)
+        => ToActionResult(await _roleService.DeleteAsync(userId));
+
+    private IActionResult ToActionResult(BaseGeneralResponse result)
     {
-        var result = await _roleService.DeleteAsync(userId);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

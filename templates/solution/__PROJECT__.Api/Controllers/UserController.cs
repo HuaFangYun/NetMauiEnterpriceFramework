@@ -3,6 +3,7 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.User;
 using __PROJECT__.Application.Interfaces;
@@ -21,11 +22,17 @@ public class UserController : ControllerBase
 
     [HttpPost("list")]
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
-        => Ok(await _userService.GetListAsync(request));
+    {
+        var result = await _userService.GetListAsync(request);
+        return Ok(ApiResponseFactory.Page(result.Data, request, result.TotalCount, "Users retrieved successfully"));
+    }
 
     [HttpPost("list-user-flag")]
     public async Task<IActionResult> GetUserFlagList([FromBody] DataTableRequestDto request)
-        => Ok(await _userService.GetUserFlagListAsync(request));
+    {
+        var result = await _userService.GetUserFlagListAsync(request);
+        return Ok(ApiResponseFactory.Page(result.Data, request, result.TotalCount, "Users retrieved successfully"));
+    }
 
     [HttpGet("export")]
     public async Task<IActionResult> Export([FromQuery] string? search)
@@ -97,41 +104,34 @@ public class UserController : ControllerBase
     public async Task<IActionResult> Get(string userId)
     {
         var user = await _userService.GetByIdAsync(userId);
-        return user == null ? NotFound() : Ok(user);
+        return user == null
+            ? NotFound(ApiResponseFactory.NotFound<UserEditDto>("User not found."))
+            : Ok(ApiResponseFactory.Success(user, "User retrieved successfully"));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create([FromBody] UserEditDto dto)
-    {
-        var result = await _userService.CreateAsync(dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _userService.CreateAsync(dto));
 
     [HttpPut("{userId}")]
     public async Task<IActionResult> Update(string userId, [FromBody] UserEditDto dto)
-    {
-        var result = await _userService.UpdateAsync(userId, dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _userService.UpdateAsync(userId, dto));
 
     [HttpDelete("{userId}")]
     public async Task<IActionResult> Delete(string userId)
-    {
-        var result = await _userService.DeleteAsync(userId);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _userService.DeleteAsync(userId));
 
     [HttpPost("unlock")]
     public async Task<IActionResult> Unlock([FromBody] UserActionDto dto)
-    {
-        var result = await _userService.UnlockAsync(dto.UserId);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _userService.UnlockAsync(dto.UserId));
 
     [HttpPost("reset-password")]
     public async Task<IActionResult> ResetPassword([FromBody] UserActionDto dto)
+        => ToActionResult(await _userService.ResetPasswordAsync(dto.UserId, dto.NewPassword ?? string.Empty));
+
+    private IActionResult ToActionResult(BaseGeneralResponse result)
     {
-        var result = await _userService.ResetPasswordAsync(dto.UserId, dto.NewPassword ?? string.Empty);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

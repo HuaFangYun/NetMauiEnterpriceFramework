@@ -106,7 +106,7 @@
             SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
         });
 
-        _currentItems = response.Data;
+        _currentItems = response.Data ?? new List<UserApprovalListItemDto>();
         foreach (var item in _currentItems)
         {
             item.SelectedAction = 2;

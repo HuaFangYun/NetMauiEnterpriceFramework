@@ -44,11 +44,11 @@
                 <MudPaper Elevation="4" Class="search-results">
                     @if (_filteredResults.Count > 0)
                     {
-                        @foreach (var item in _filteredResults)
+                        @foreach (var result in _filteredResults)
                         {
-                            <button type="button" class="search-result" @onclick="() => OpenSearchResult(item)">
-                                <div class="search-result-title">@item.MenuName</div>
-                                <div class="search-result-subtitle">@GetSearchDescription(item)</div>
+                            <button type="button" class="search-result" @onclick="() => OpenSearchResult(result)">
+                                <div class="search-result-title">@result.Item.MenuName</div>
+                                <div class="search-result-subtitle">@result.Path</div>
                             </button>
                         }
                     }
@@ -59,7 +59,6 @@
                 </MudPaper>
             </MudPopover>
         </div>
-        <MudSpacer />
         <div class="notification-wrapper">
             <MudBadge Color="Color.Secondary"
                       Visible="@(_unreadCount > 0)"
@@ -226,7 +225,7 @@
     private string? _userName;
     private string _searchTerm = string.Empty;
     private bool _searchOpen;
-    private List<MenuItemDto> _filteredResults = new();
+    private List<MenuSearchResult> _filteredResults = new();
     private List<MenuItemDto> _menuItems = new();
     private List<NotificationDto> _notifications = new();
     private HubConnection? _hub;
@@ -486,36 +485,41 @@
     {
         _searchOpen = true;
         _filteredResults = string.IsNullOrWhiteSpace(_searchTerm)
-            ? new List<MenuItemDto>()
-            : Flatten(_menuItems)
-                .Where(m => !string.IsNullOrWhiteSpace(m.ComponentType)
-                            && m.MenuName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+            ? new List<MenuSearchResult>()
+            : FlattenWithPath(_menuItems)
+                .Where(m => !string.IsNullOrWhiteSpace(m.Item.ComponentType)
+                            && (m.Item.MenuName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)
+                                || m.Path.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase)))
                 .Take(10)
                 .ToList();
     }
 
-    private void OpenSearchResult(MenuItemDto item)
+    private void OpenSearchResult(MenuSearchResult result)
     {
-        OpenMenu(item);
+        OpenMenu(result.Item);
         _searchTerm = string.Empty;
         _filteredResults.Clear();
         _searchOpen = false;
     }
 
-    private static string GetSearchDescription(MenuItemDto item)
-        => string.IsNullOrWhiteSpace(item.MenuUrl) ? "Open menu" : item.MenuUrl;
-
-    private static IEnumerable<MenuItemDto> Flatten(IEnumerable<MenuItemDto> items)
+    private static IEnumerable<MenuSearchResult> FlattenWithPath(IEnumerable<MenuItemDto> items, string parentPath = "")
     {
         foreach (var item in items)
         {
-            yield return item;
-            foreach (var child in Flatten(item.Children))
+            var path = string.IsNullOrWhiteSpace(parentPath)
+                ? item.MenuName
+                : $"{parentPath} -> {item.MenuName}";
+
+            yield return new MenuSearchResult(item, path);
+
+            foreach (var child in FlattenWithPath(item.Children, path))
             {
                 yield return child;
             }
         }
     }
+
+    private sealed record MenuSearchResult(MenuItemDto Item, string Path);
 
     public void Dispose()
     {

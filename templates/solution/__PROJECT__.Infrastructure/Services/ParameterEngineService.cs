@@ -58,22 +58,20 @@ public class ParameterEngineService : IParameterEngineService
             .OrderBy(e => e.description)
             .Select(e => new ParameterCardDto
             {
-                TableName = e.table_name,
+                Id = e.table_name,
                 Description = e.description,
-                MakerUrl = e.param_maker_url,
-                ApprovalUrl = e.param_approval_url,
-                IsMaker = e.is_param_maker == true,
-                IsApproval = e.is_param_approval == true,
-                IsUpload = e.is_param_upload == true,
+                IsParamMaker = e.is_param_maker == true,
+                IsParamApproval = e.is_param_approval == true,
+                IsParamUpload = e.is_param_upload == true,
                 Icon = e.icon,
             })
             .ToListAsync();
 
         foreach (var card in cards)
         {
-            card.PendingCount = pending.GetValueOrDefault(card.TableName);
-            card.MakerUrl ??= $"/dashboard/maintenance/parameter-system/maker/{card.TableName}";
-            card.ApprovalUrl ??= $"/dashboard/maintenance/parameter-system/approval/{card.TableName}";
+            var tableName = card.Id;
+            card.Id = ParameterReference.Encode(tableName);
+            card.HasWaitingApproval = pending.GetValueOrDefault(tableName) > 0;
         }
 
         return cards;
@@ -257,8 +255,13 @@ public class ParameterEngineService : IParameterEngineService
         {
             Fields = fields,
             Rows = rows,
-            TotalCount = total,
             KeyField = string.Join("+", keyFields.Select(e => e.FieldName)),
+            Pagination = new PaginationInfo
+            {
+                PageNumber = page,
+                PageSize = pageSize,
+                TotalCount = total,
+            },
         };
     }
 
@@ -1028,12 +1031,18 @@ public class ParameterEngineService : IParameterEngineService
     private static string NormalizeTable(string tableName)
     {
         tableName = (tableName ?? string.Empty).Trim();
-        if (!AllowedTables.Contains(tableName))
+        if (AllowedTables.Contains(tableName))
         {
-            throw new InvalidOperationException("Table is not registered as a parameter.");
+            return tableName;
         }
 
-        return tableName;
+        var decoded = ParameterReference.Decode(tableName);
+        if (AllowedTables.Contains(decoded))
+        {
+            return decoded;
+        }
+
+        throw new InvalidOperationException("Table is not registered as a parameter.");
     }
 
     private static List<ParameterFieldDto> GetKeyFields(List<ParameterFieldDto> fields)

@@ -1,18 +1,64 @@
+using System.Text;
 using System.Text.Json.Serialization;
+
+using __PROJECT__.Application.DTOs.General;
 
 namespace __PROJECT__.Application.DTOs.Parameter;
 
+public static class ParameterReference
+{
+    public static string Encode(string tableName)
+    {
+        var encoded = Convert.ToBase64String(Encoding.UTF8.GetBytes(tableName));
+        return encoded.TrimEnd('=').Replace('+', '-').Replace('/', '_');
+    }
+
+    public static string Decode(string? reference)
+    {
+        if (string.IsNullOrWhiteSpace(reference))
+        {
+            return string.Empty;
+        }
+
+        var encoded = reference.Replace('-', '+').Replace('_', '/');
+        encoded = encoded.PadRight(encoded.Length + ((4 - encoded.Length % 4) % 4), '=');
+
+        try
+        {
+            var decoded = Encoding.UTF8.GetString(Convert.FromBase64String(encoded));
+            return string.IsNullOrWhiteSpace(decoded) ? reference : decoded;
+        }
+        catch (FormatException)
+        {
+            return reference;
+        }
+    }
+}
+
 public class ParameterCardDto
 {
-    public string TableName { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? MakerUrl { get; set; }
-    public string? ApprovalUrl { get; set; }
-    public bool IsMaker { get; set; }
-    public bool IsApproval { get; set; }
-    public bool IsUpload { get; set; }
+    public bool IsParamMaker { get; set; }
+    public bool IsParamApproval { get; set; }
+    public bool IsParamUpload { get; set; }
+    public bool HasWaitingApproval { get; set; }
     public string? Icon { get; set; }
-    public int PendingCount { get; set; }
+
+    [JsonIgnore]
+    public string TableName => ParameterReference.Decode(Id);
+
+    [JsonIgnore]
+    public bool IsMaker => IsParamMaker;
+
+    [JsonIgnore]
+    public bool IsApproval => IsParamApproval;
+
+    [JsonIgnore]
+    public bool IsUpload => IsParamUpload;
+
+    [JsonIgnore]
+    public int PendingCount => HasWaitingApproval ? 1 : 0;
 }
 
 public class ParameterFieldDto
@@ -28,12 +74,17 @@ public class ParameterFieldDto
     public string? AddClass { get; set; }
 }
 
-public class ParameterListResponseDto
+public class ParameterListResponseDto : PaginatedResponse<Dictionary<string, string>>
 {
     public List<ParameterFieldDto> Fields { get; set; } = new();
-    public List<Dictionary<string, string>> Rows { get; set; } = new();
-    public int TotalCount { get; set; }
     public string? KeyField { get; set; }
+
+    [JsonIgnore]
+    public List<Dictionary<string, string>> Rows
+    {
+        get => Data ?? new List<Dictionary<string, string>>();
+        set => Data = value;
+    }
 }
 
 public class ParameterSaveRequestDto

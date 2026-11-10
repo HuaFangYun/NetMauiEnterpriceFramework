@@ -12,7 +12,7 @@ public class MenuService
     {
         try
         {
-            return await _api.GetFromJsonAsync<List<MenuItemDto>>("api/menu") ?? new List<MenuItemDto>();
+            return await _api.GetFromJsonAsync<List<MenuItemDto>>("api/menu", unwrap: true) ?? new List<MenuItemDto>();
         }
         catch
         {

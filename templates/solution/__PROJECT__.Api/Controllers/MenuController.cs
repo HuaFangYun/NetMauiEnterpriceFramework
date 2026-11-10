@@ -5,6 +5,7 @@ using ClosedXML.Excel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.Menu;
 using __PROJECT__.Application.Interfaces;
@@ -42,17 +43,20 @@ public class MenuController : ControllerBase
         var userGroup = await _unitOfWork.UmUserGroup.GetByIdAsync(userId);
         if (userGroup == null || string.IsNullOrEmpty(userGroup.group_id))
         {
-            return Ok(new List<MenuItemDto>());
+            return Ok(ApiResponseFactory.Success(new List<MenuItemDto>(), "Menus retrieved successfully"));
         }
 
         var menu = await _menuService.GetMenuTreeByGroupIdAsync(userGroup.group_id);
-        return Ok(menu);
+        return Ok(ApiResponseFactory.Success(menu, "Menus retrieved successfully"));
     }
 
     [HttpPost("list")]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> GetList([FromBody] DataTableRequestDto request)
-        => Ok(await _menuManagementService.GetListAsync(request));
+    {
+        var result = await _menuManagementService.GetListAsync(request);
+        return Ok(ApiResponseFactory.Page(result.Data, request, result.TotalCount, "Menus retrieved successfully"));
+    }
 
     [HttpGet("export")]
     [Authorize(Roles = "00")]
@@ -116,47 +120,44 @@ public class MenuController : ControllerBase
     public async Task<IActionResult> GetDetail(long id)
     {
         var menu = await _menuManagementService.GetByIdAsync(id);
-        return menu == null ? NotFound() : Ok(menu);
+        return menu == null
+            ? NotFound(ApiResponseFactory.NotFound<MenuEditDto>("Menu not found."))
+            : Ok(ApiResponseFactory.Success(menu, "Menu retrieved successfully"));
     }
 
     [HttpPost]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> Create([FromBody] MenuEditDto dto)
-    {
-        var result = await _menuManagementService.CreateAsync(dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _menuManagementService.CreateAsync(dto));
 
     [HttpPut("{id:long}")]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> Update(long id, [FromBody] MenuEditDto dto)
-    {
-        var result = await _menuManagementService.UpdateAsync(id, dto);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _menuManagementService.UpdateAsync(id, dto));
 
     [HttpDelete("{id:long}")]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> Delete(long id)
-    {
-        var result = await _menuManagementService.DeleteAsync(id);
-        return result.Success ? Ok(result) : BadRequest(result);
-    }
+        => ToActionResult(await _menuManagementService.DeleteAsync(id));
 
     [HttpGet("tree")]
     [Authorize(Roles = "00")]
-    public async Task<IActionResult> GetTree() => Ok(await _menuManagementService.GetTreeAsync());
+    public async Task<IActionResult> GetTree()
+        => Ok(ApiResponseFactory.Success(await _menuManagementService.GetTreeAsync(), "Menu tree retrieved successfully"));
 
     [HttpGet("assigned/{groupId}")]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> GetAssigned(string groupId)
-        => Ok(await _menuManagementService.GetAssignedMenuIdsAsync(groupId));
+        => Ok(ApiResponseFactory.Success(await _menuManagementService.GetAssignedMenuIdsAsync(groupId), "Assigned menus retrieved successfully"));
 
     [HttpPost("save-map")]
     [Authorize(Roles = "00")]
     public async Task<IActionResult> SaveMap([FromBody] MenuMapDto dto)
+        => ToActionResult(await _menuManagementService.SaveMenuMapAsync(dto));
+
+    private IActionResult ToActionResult(BaseGeneralResponse result)
     {
-        var result = await _menuManagementService.SaveMenuMapAsync(dto);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

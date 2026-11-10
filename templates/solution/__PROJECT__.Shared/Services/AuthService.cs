@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Net;
 
 using __PROJECT__.Application.DTOs.Auth;
+using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Shared.Services.Interfaces;
 
 namespace __PROJECT__.Shared.Services;
@@ -51,7 +52,8 @@ public class AuthService
             return null;
         }
 
-        return await response.Content.ReadFromJsonAsync<UserResponseDto>();
+        var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<UserResponseDto>>();
+        return wrapper?.Data;
     }
 
     public async Task<UserResponseDto?> UpdateProfileAsync(UpdateProfileDto request)
@@ -68,7 +70,8 @@ public class AuthService
             throw new Exception(await ReadErrorAsync(response));
         }
 
-        return await response.Content.ReadFromJsonAsync<UserResponseDto>();
+        var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<UserResponseDto>>();
+        return wrapper?.Data;
     }
 
     public async Task ChangePasswordAsync(ChangePasswordDto request)

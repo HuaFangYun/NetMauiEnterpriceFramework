@@ -264,12 +264,12 @@
             {
                 _makerFields = await ParameterApi.GetFieldsAsync(TableName!);
                 _cards = await ParameterApi.GetCardsAsync();
-                _cardDescription = _cards.FirstOrDefault(c => c.TableName == TableName)?.Description;
+                _cardDescription = _cards.FirstOrDefault(c => c.Id == TableName)?.Description;
             }
             else if (IsApprovalView)
             {
                 _cards = await ParameterApi.GetCardsAsync();
-                _cardDescription = _cards.FirstOrDefault(c => c.TableName == TableName)?.Description;
+                _cardDescription = _cards.FirstOrDefault(c => c.Id == TableName)?.Description;
                 _approvalFields = await ParameterApi.GetFieldsAsync(TableName!);
                 _approvalOptions = await ParameterApi.GetOptionsAsync(TableName!);
             }
@@ -324,7 +324,7 @@
             SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
         });
 
-        _approvalRows = response.Data;
+        _approvalRows = response.Data ?? new List<ParameterApprovalRowDto>();
         foreach (var row in _approvalRows)
         {
             row.Action = 2;
@@ -344,8 +344,8 @@
         TabService.OpenTab(
             $"{card.Description} Maker",
             ParameterComponent,
-            $"/dashboard/maintenance/parameter-system/maker/{card.TableName}",
-            new Dictionary<string, object> { ["Mode"] = "maker", ["TableName"] = card.TableName },
+            $"/dashboard/maintenance/parameter-system/maker/{card.Id}",
+            new Dictionary<string, object> { ["Mode"] = "maker", ["TableName"] = card.Id },
             card.Icon);
     }
 
@@ -354,8 +354,8 @@
         TabService.OpenTab(
             $"{card.Description} Approval",
             ParameterComponent,
-            $"/dashboard/maintenance/parameter-system/approval/{card.TableName}",
-            new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.TableName },
+            $"/dashboard/maintenance/parameter-system/approval/{card.Id}",
+            new Dictionary<string, object> { ["Mode"] = "approval", ["TableName"] = card.Id },
             card.Icon);
     }
 

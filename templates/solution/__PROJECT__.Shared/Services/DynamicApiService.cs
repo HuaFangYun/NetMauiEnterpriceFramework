@@ -12,20 +12,21 @@ public class DynamicApiService
     public DynamicApiService(ApiService api) => _api = api;
 
     public Task<DynamicScreenDto?> GetScreenAsync(string screenId)
-        => _api.GetFromJsonAsync<DynamicScreenDto>($"api/dynamic/screen/{Uri.EscapeDataString(screenId)}");
+        => _api.GetFromJsonAsync<DynamicScreenDto>($"api/dynamic/screen/{Uri.EscapeDataString(screenId)}", unwrap: true);
 
-    public async Task<DynamicLoadResultDto?> LoadScreenAsync(string screenId, DynamicLoadRequestDto request)
-        => await _api.PostRawFromJsonAsync<DynamicLoadRequestDto, DynamicLoadResultDto>(
+    public Task<DynamicLoadResultDto?> LoadScreenAsync(string screenId, DynamicLoadRequestDto request)
+        => _api.PostFromJsonAsync<DynamicLoadRequestDto, DynamicLoadResultDto>(
             $"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/load", request);
 
     public async Task<List<DynamicOptionDto>> GetOptionsAsync(string screenId, string fieldId)
         => await _api.GetFromJsonAsync<List<DynamicOptionDto>>(
-               $"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/options/{Uri.EscapeDataString(fieldId)}")
+               $"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/options/{Uri.EscapeDataString(fieldId)}", unwrap: true)
            ?? new List<DynamicOptionDto>();
 
     public Task<Dictionary<string, object?>?> GetChildDetailAsync(string screenId, string key)
         => _api.GetFromJsonAsync<Dictionary<string, object?>>(
-            $"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/child/detail?key={Uri.EscapeDataString(key)}");
+            $"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/child/detail?key={Uri.EscapeDataString(key)}",
+            unwrap: true);
 
     public async Task<BaseGeneralResponse> SaveChildAsync(string screenId, DynamicMutationRequestDto request)
         => await ReadAsync(await _api.PostAsync($"api/dynamic/screen/{Uri.EscapeDataString(screenId)}/child/save", request));
@@ -59,9 +60,9 @@ public class DynamicApiService
     }
 
     public Task<DynamicReportDto?> GetReportAsync(string reportId)
-        => _api.GetFromJsonAsync<DynamicReportDto>($"api/dynamic/report/{Uri.EscapeDataString(reportId)}");
+        => _api.GetFromJsonAsync<DynamicReportDto>($"api/dynamic/report/{Uri.EscapeDataString(reportId)}", unwrap: true);
 
-    public async Task<DynamicLoadResultDto?> LoadReportAsync(string reportId, DynamicLoadRequestDto request)
-        => await _api.PostRawFromJsonAsync<DynamicLoadRequestDto, DynamicLoadResultDto>(
+    public Task<DynamicLoadResultDto?> LoadReportAsync(string reportId, DynamicLoadRequestDto request)
+        => _api.PostFromJsonAsync<DynamicLoadRequestDto, DynamicLoadResultDto>(
             $"api/dynamic/report/{Uri.EscapeDataString(reportId)}/load", request);
 }

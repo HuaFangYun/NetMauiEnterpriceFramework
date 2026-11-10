@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.Interfaces;
 
 namespace __PROJECT__.Api.Controllers;
@@ -15,17 +16,22 @@ public class DropDownController : ControllerBase
     public DropDownController(IDropDownService dropDownService) => _dropDownService = dropDownService;
 
     [HttpGet("groups")]
-    public async Task<IActionResult> GetGroups() => Ok(await _dropDownService.GetGroupsAsync());
+    public async Task<IActionResult> GetGroups()
+        => Ok(ApiResponseFactory.Success(await _dropDownService.GetGroupsAsync(), "Groups retrieved successfully"));
 
     [HttpGet("genders")]
-    public async Task<IActionResult> GetGenders() => Ok(await _dropDownService.GetGendersAsync());
+    public async Task<IActionResult> GetGenders()
+        => Ok(ApiResponseFactory.Success(await _dropDownService.GetGendersAsync(), "Genders retrieved successfully"));
 
     [HttpGet("users")]
-    public async Task<IActionResult> GetUsers() => Ok(await _dropDownService.GetUsersAsync());
+    public async Task<IActionResult> GetUsers()
+        => Ok(ApiResponseFactory.Success(await _dropDownService.GetUsersAsync(), "Users retrieved successfully"));
 
     [HttpGet("menu-icons")]
-    public async Task<IActionResult> GetMenuIcons() => Ok(await _dropDownService.GetMenuIconsAsync());
+    public async Task<IActionResult> GetMenuIcons()
+        => Ok(ApiResponseFactory.Success(await _dropDownService.GetMenuIconsAsync(), "Menu icons retrieved successfully"));
 
     [HttpGet("menu-parent-levels")]
-    public async Task<IActionResult> GetMenuParentLevels() => Ok(await _dropDownService.GetMenuParentLevelsAsync());
+    public async Task<IActionResult> GetMenuParentLevels()
+        => Ok(ApiResponseFactory.Success(await _dropDownService.GetMenuParentLevelsAsync(), "Menu parent levels retrieved successfully"));
 }

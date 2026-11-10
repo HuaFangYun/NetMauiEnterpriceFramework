@@ -3,6 +3,7 @@ using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.Dynamic;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.Interfaces;
@@ -27,7 +28,9 @@ public class DynamicController : ControllerBase
         }
 
         var screen = await _dynamicService.GetScreenAsync(screenId);
-        return screen == null ? NotFound() : Ok(screen);
+        return screen == null
+            ? NotFound(ApiResponseFactory.NotFound<DynamicScreenDto>("Screen not found."))
+            : Ok(ApiResponseFactory.Success(screen, "Screen retrieved successfully"));
     }
 
     [HttpPost("screen/{screenId}/load")]
@@ -40,11 +43,12 @@ public class DynamicController : ControllerBase
 
         try
         {
-            return Ok(await _dynamicService.LoadScreenAsync(screenId, request));
+            var result = await _dynamicService.LoadScreenAsync(screenId, request);
+            return Ok(ApiResponseFactory.Success(result, "Screen loaded successfully"));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<DynamicLoadResultDto>(ex.Message));
         }
     }
 
@@ -58,11 +62,12 @@ public class DynamicController : ControllerBase
 
         try
         {
-            return Ok(await _dynamicService.GetOptionsAsync(screenId, fieldId));
+            var options = await _dynamicService.GetOptionsAsync(screenId, fieldId);
+            return Ok(ApiResponseFactory.Success(options, "Options retrieved successfully"));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<List<DynamicOptionDto>>(ex.Message));
         }
     }
 
@@ -77,11 +82,13 @@ public class DynamicController : ControllerBase
         try
         {
             var row = await _dynamicService.GetChildDetailAsync(screenId, key);
-            return row == null ? NotFound() : Ok(row);
+            return row == null
+                ? NotFound(ApiResponseFactory.NotFound<Dictionary<string, object?>>("Data not found."))
+                : Ok(ApiResponseFactory.Success(row, "Data retrieved successfully"));
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<Dictionary<string, object?>>(ex.Message));
         }
     }
 
@@ -93,8 +100,7 @@ public class DynamicController : ControllerBase
             return Forbid();
         }
 
-        var result = await _dynamicService.SaveChildAsync(screenId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(await _dynamicService.SaveChildAsync(screenId, request));
     }
 
     [HttpPost("screen/{screenId}/process")]
@@ -105,8 +111,7 @@ public class DynamicController : ControllerBase
             return Forbid();
         }
 
-        var result = await _dynamicService.ProcessAsync(screenId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(await _dynamicService.ProcessAsync(screenId, request));
     }
 
     [HttpPost("screen/{screenId}/import-excel")]
@@ -120,12 +125,11 @@ public class DynamicController : ControllerBase
 
         if (file == null || file.Length == 0)
         {
-            return BadRequest(new BaseGeneralResponse { Success = false, Message = "Excel file is required." });
+            return BadRequest(ApiResponseFactory.Error<string>("Excel file is required."));
         }
 
         await using var stream = file.OpenReadStream();
-        var result = await _dynamicService.ImportExcelAsync(screenId, stream, file.FileName);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(await _dynamicService.ImportExcelAsync(screenId, stream, file.FileName));
     }
 
     [HttpPost("screen/{screenId}/delete")]
@@ -136,8 +140,7 @@ public class DynamicController : ControllerBase
             return Forbid();
         }
 
-        var result = await _dynamicService.DeleteAsync(screenId, request);
-        return result.Success ? Ok(result) : BadRequest(result);
+        return ToActionResult(await _dynamicService.DeleteAsync(screenId, request));
     }
 
     [HttpGet("screen/{screenId}/export-txt")]
@@ -160,7 +163,7 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<string>(ex.Message));
         }
     }
 
@@ -168,7 +171,9 @@ public class DynamicController : ControllerBase
     public async Task<IActionResult> GetReport(string reportId)
     {
         var report = await _dynamicService.GetReportAsync(reportId);
-        return report == null ? NotFound() : Ok(report);
+        return report == null
+            ? NotFound(ApiResponseFactory.NotFound<DynamicReportDto>("Report not found."))
+            : Ok(ApiResponseFactory.Success(report, "Report retrieved successfully"));
     }
 
     [HttpPost("report/{reportId}/load")]
@@ -176,7 +181,8 @@ public class DynamicController : ControllerBase
     {
         try
         {
-            return Ok(await _dynamicService.LoadReportAsync(reportId, request));
+            var result = await _dynamicService.LoadReportAsync(reportId, request);
+            return Ok(ApiResponseFactory.Success(result, "Report loaded successfully"));
         }
         catch (UnauthorizedAccessException ex)
         {
@@ -184,7 +190,13 @@ public class DynamicController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<DynamicLoadResultDto>(ex.Message));
         }
+    }
+
+    private IActionResult ToActionResult(BaseGeneralResponse result)
+    {
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

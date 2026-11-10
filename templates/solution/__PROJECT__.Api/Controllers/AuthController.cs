@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.DTOs.Auth;
 using __PROJECT__.Application.Exceptions;
 using __PROJECT__.Application.Interfaces;
@@ -61,7 +62,7 @@ public class AuthController : ControllerBase
         }
 
         await _authService.LogoutAsync(userId, request?.RefreshToken ?? string.Empty);
-        return Ok(new { message = "Logged out successfully" });
+        return Ok(ApiResponseFactory.Success("Logged out successfully"));
     }
 
     [HttpGet("me")]
@@ -75,7 +76,9 @@ public class AuthController : ControllerBase
         }
 
         var user = await _authService.GetUserByIdAsync(userId);
-        return user == null ? NotFound() : Ok(user);
+        return user == null
+            ? NotFound(ApiResponseFactory.NotFound<UserResponseDto>("User not found."))
+            : Ok(ApiResponseFactory.Success(user, "User profile retrieved successfully"));
     }
 
     [HttpPut("profile")]
@@ -91,11 +94,13 @@ public class AuthController : ControllerBase
         try
         {
             var user = await _authService.UpdateProfileAsync(userId, request);
-            return user == null ? NotFound() : Ok(user);
+            return user == null
+                ? NotFound(ApiResponseFactory.NotFound<UserResponseDto>("User not found."))
+                : Ok(ApiResponseFactory.Success(user, "Profile updated successfully"));
         }
         catch (AuthenticationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<UserResponseDto>(ex.Message));
         }
     }
 
@@ -112,11 +117,11 @@ public class AuthController : ControllerBase
         try
         {
             await _authService.ChangePasswordAsync(userId, request);
-            return Ok(new { message = "Password changed successfully" });
+            return Ok(ApiResponseFactory.Success("Password changed successfully"));
         }
         catch (AuthenticationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ApiResponseFactory.Error<string>(ex.Message));
         }
     }
 

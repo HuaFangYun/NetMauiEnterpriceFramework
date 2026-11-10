@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
 using __PROJECT__.Application.Interfaces;
 
 namespace __PROJECT__.Api.Controllers;
@@ -23,7 +24,7 @@ public class NotificationController : ControllerBase
         var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         return string.IsNullOrWhiteSpace(userId)
             ? Unauthorized()
-            : Ok(await _notificationService.GetRecentAsync(userId, top));
+            : Ok(ApiResponseFactory.Success(await _notificationService.GetRecentAsync(userId, top), "Notifications retrieved successfully"));
     }
 
     [HttpPost("{id:long}/seen")]
@@ -36,7 +37,8 @@ public class NotificationController : ControllerBase
         }
 
         var result = await _notificationService.MarkSeenAsync(userId, id);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 
     [HttpPost("seen-all")]
@@ -49,6 +51,7 @@ public class NotificationController : ControllerBase
         }
 
         var result = await _notificationService.MarkAllSeenAsync(userId);
-        return result.Success ? Ok(result) : BadRequest(result);
+        var response = ApiResponseFactory.FromResult(result);
+        return result.Success ? Ok(response) : BadRequest(response);
     }
 }

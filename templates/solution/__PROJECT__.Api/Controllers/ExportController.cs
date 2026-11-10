@@ -6,9 +6,10 @@ using Hangfire;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
+using __PROJECT__.Api.Helpers;
+using __PROJECT__.Api.Services;
 using __PROJECT__.Application.DTOs.Dynamic;
 using __PROJECT__.Application.DTOs.Export;
-using __PROJECT__.Api.Services;
 
 namespace __PROJECT__.Api.Controllers;
 
@@ -41,7 +42,9 @@ public class ExportController : ControllerBase
         var jobId = _jobs.Enqueue<ExcelExportJob>(job =>
             job.ExportReportAsync(reportId, request, userId, fileName));
 
-        return Ok(new ExportQueueResultDto { JobId = jobId, FileName = fileName });
+        return Ok(ApiResponseFactory.Success(
+            new ExportQueueResultDto { JobId = jobId, FileName = fileName },
+            "Export started."));
     }
 
     [HttpPost("screen/{screenId}")]
@@ -57,7 +60,9 @@ public class ExportController : ControllerBase
         var jobId = _jobs.Enqueue<ExcelExportJob>(job =>
             job.ExportScreenAsync(screenId, request, userId, fileName));
 
-        return Ok(new ExportQueueResultDto { JobId = jobId, FileName = fileName });
+        return Ok(ApiResponseFactory.Success(
+            new ExportQueueResultDto { JobId = jobId, FileName = fileName },
+            "Export started."));
     }
 
     [HttpPost("pdf/report/{reportId}")]
@@ -73,7 +78,9 @@ public class ExportController : ControllerBase
         var jobId = _jobs.Enqueue<PdfExportJob>(job =>
             job.ExportReportAsync(reportId, request, userId, fileName));
 
-        return Ok(new ExportQueueResultDto { JobId = jobId, FileName = fileName });
+        return Ok(ApiResponseFactory.Success(
+            new ExportQueueResultDto { JobId = jobId, FileName = fileName },
+            "Export started."));
     }
 
     [HttpPost("pdf/screen/{screenId}")]
@@ -89,7 +96,9 @@ public class ExportController : ControllerBase
         var jobId = _jobs.Enqueue<PdfExportJob>(job =>
             job.ExportScreenAsync(screenId, request, userId, fileName));
 
-        return Ok(new ExportQueueResultDto { JobId = jobId, FileName = fileName });
+        return Ok(ApiResponseFactory.Success(
+            new ExportQueueResultDto { JobId = jobId, FileName = fileName },
+            "Export started."));
     }
 
     [HttpGet("download/{fileName}")]
