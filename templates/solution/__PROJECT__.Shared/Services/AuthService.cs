@@ -74,6 +74,20 @@ public class AuthService
         return wrapper?.Data;
     }
 
+    public async Task ChangeFirstLoginPasswordAsync(FirstLoginPasswordDto request)
+    {
+        using var message = new HttpRequestMessage(HttpMethod.Post, "api/auth/first-login/change-password")
+        {
+            Content = JsonContent.Create(request),
+        };
+
+        var response = await _httpClient.SendAsync(message);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(await ReadErrorAsync(response));
+        }
+    }
+
     public async Task ChangePasswordAsync(ChangePasswordDto request)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "api/auth/change-password")

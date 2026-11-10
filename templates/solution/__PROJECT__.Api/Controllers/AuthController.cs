@@ -55,6 +55,22 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("first-login/change-password")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ChangeFirstLoginPassword([FromBody] FirstLoginPasswordDto request)
+    {
+        try
+        {
+            await _authService.ChangeFirstLoginPasswordAsync(request);
+            return Ok(ApiResponseFactory.Success("Password changed successfully. Please sign in with your new password."));
+        }
+        catch (AuthenticationException ex)
+        {
+            await _errorLog.LogAsync("Auth", "ERROR", ex);
+            return BadRequest(ApiResponseFactory.Error<string>(ex.Message));
+        }
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout([FromBody] LogoutRequestDto? request)

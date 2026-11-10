@@ -3,6 +3,7 @@ using System.Text;
 
 using Microsoft.Extensions.Configuration;
 
+using __PROJECT__.Application.Common;
 using __PROJECT__.Application.DTOs.Auth;
 using __PROJECT__.Application.Exceptions;
 using __PROJECT__.Application.Interfaces;
@@ -97,6 +98,22 @@ public class AuthService : IAuthService
         if (flag.is_locked == true)
         {
             throw new AuthenticationException("Account is locked. Please contact administrator.");
+        }
+
+        if (flag.is_first_login == true)
+        {
+            flag.failed_password_attempt_count = 0;
+            flag.failed_password_attempt_date = null;
+            await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
+            await _unitOfWork.SaveChangesAsync();
+
+            return new LoginResponseDto
+            {
+                User = await MapToUserDto(user),
+                UrlDestination = "firstlogin",
+                RequiresPasswordChange = true,
+                PasswordWarning = "Please change the default password before signing in.",
+            };
         }
 
         var previousSessionId = flag.session_id;
@@ -243,6 +260,50 @@ public class AuthService : IAuthService
         return await MapToUserDto(user);
     }
 
+    public async Task ChangeFirstLoginPasswordAsync(FirstLoginPasswordDto request)
+    {
+        var user = await _unitOfWork.UmUserApp.GetByIdAsync(request.UserId);
+        if (user == null || user.isActive != true || user.isDeleted == true)
+        {
+            throw new AuthenticationException("User not found.");
+        }
+
+        if (!_passwordHasher.ValidatePassword(request.CurrentPassword, user.password ?? string.Empty))
+        {
+            throw new AuthenticationException("Old password is incorrect.");
+        }
+
+        if (!string.Equals(request.NewPassword, request.ConfirmNewPassword, StringComparison.Ordinal))
+        {
+            throw new AuthenticationException("New password and confirmation do not match.");
+        }
+
+        var policyError = PasswordPolicy.Validate(request.NewPassword);
+        if (policyError != null)
+        {
+            throw new AuthenticationException(policyError);
+        }
+
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(user.user_id);
+        if (flag?.is_first_login != true)
+        {
+            throw new AuthenticationException("First login password change is not required.");
+        }
+
+        var now = DateTime.Now;
+        user.password = _passwordHasher.HashPassword(request.NewPassword);
+        user.last_password_change_date = now;
+        user.modifiedDate = now;
+        await _unitOfWork.UmUserApp.UpdateAsync(user);
+
+        flag.is_first_login = false;
+        flag.last_password_changed_date = now;
+        flag.failed_password_attempt_count = 0;
+        flag.failed_password_attempt_date = null;
+        await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
+        await _unitOfWork.SaveChangesAsync();
+    }
+
     public async Task ChangePasswordAsync(string userId, ChangePasswordDto request)
     {
         var user = await _unitOfWork.UmUserApp.GetByIdAsync(userId);
@@ -259,6 +320,12 @@ public class AuthService : IAuthService
         if (request.NewPassword != request.ConfirmNewPassword)
         {
             throw new AuthenticationException("New password and confirmation do not match.");
+        }
+
+        var policyError = PasswordPolicy.Validate(request.NewPassword);
+        if (policyError != null)
+        {
+            throw new AuthenticationException(policyError);
         }
 
         user.password = _passwordHasher.HashPassword(request.NewPassword);

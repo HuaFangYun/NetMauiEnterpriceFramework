@@ -16,7 +16,16 @@ public class LoginResponseDto
     public UserResponseDto User { get; set; } = new();
     public string UrlDestination { get; set; } = "login";
     public bool IsPasswordExpiry { get; set; }
+    public bool RequiresPasswordChange { get; set; }
     public string PasswordWarning { get; set; } = string.Empty;
+}
+
+public class FirstLoginPasswordDto
+{
+    public string UserId { get; set; } = string.Empty;
+    public string CurrentPassword { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
+    public string ConfirmNewPassword { get; set; } = string.Empty;
 }
 
 public class RefreshTokenRequestDto

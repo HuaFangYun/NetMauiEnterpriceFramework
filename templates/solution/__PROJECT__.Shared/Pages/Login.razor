@@ -1,6 +1,7 @@
 @page "/"
 @layout MainLayout
 @attribute [AllowAnonymous]
+@using __PROJECT__.Application.Common
 @inject AuthService AuthService
 @inject ITokenStorage TokenStorage
 @inject INotifyAuthenticationState AuthStateNotifier
@@ -40,54 +41,118 @@
     <MudItem xs="12" md="6" Class="login-form-item">
         <MudPaper Elevation="0" Class="login-form-panel">
             <div class="login-form-header">
-                <h2>Sign In</h2>
-                <p>Please enter your credentials to access your account.</p>
+                <h2>@(_requiresPasswordChange ? "Change Password" : "Sign In")</h2>
+                <p>
+                    @(_requiresPasswordChange
+                        ? "This is your first login. Please set a new password before continuing."
+                        : "Please enter your credentials to access your account.")
+                </p>
             </div>
 
             @if (!string.IsNullOrWhiteSpace(_errorMessage))
             {
                 <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
             }
+            @if (!string.IsNullOrWhiteSpace(_successMessage))
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-4">@_successMessage</MudAlert>
+            }
 
-            <EditForm Model="@_loginModel" OnValidSubmit="@OnLoginAsync">
-                <DataAnnotationsValidator />
-                <div class="login-form-fields">
-                    <MudTextField @bind-Value="_loginModel.UserId"
-                                  Label="Username"
-                                  Placeholder="Enter your ID"
-                                  Variant="Variant.Outlined"
-                                  FullWidth="true"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Badge" />
-                    <MudTextField @bind-Value="_loginModel.Password"
-                                  Label="Password"
-                                  Placeholder="••••••••"
-                                  Variant="Variant.Outlined"
-                                  FullWidth="true"
-                                  InputType="InputType.Password"
-                                  Adornment="Adornment.Start"
-                                  AdornmentIcon="@Icons.Material.Filled.Lock" />
-                    <div class="login-form-options">
-                        <MudCheckBox T="bool" @bind-Value="_loginModel.RememberMe" Color="Color.Primary">Remember this device</MudCheckBox>
-                        <MudLink Href="#" Underline="Underline.Always" Style="color:#004481;">Forgot Password?</MudLink>
+            @if (_requiresPasswordChange)
+            {
+                <EditForm Model="@_firstLoginModel" OnValidSubmit="@OnFirstLoginPasswordChangeAsync">
+                    <DataAnnotationsValidator />
+                    <div class="login-form-fields">
+                        <MudTextField @bind-Value="_firstLoginModel.CurrentPassword"
+                                      Label="Old Password"
+                                      Placeholder="Enter your default password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudTextField @bind-Value="_firstLoginModel.NewPassword"
+                                      Label="New Password"
+                                      Placeholder="Enter your new password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudTextField @bind-Value="_firstLoginModel.ConfirmNewPassword"
+                                      Label="Confirm New Password"
+                                      Placeholder="Repeat your new password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Minimum 8 characters, with uppercase, lowercase, number, and special character.
+                        </MudText>
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Size="Size.Large"
+                                   Disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Change Password</span>
+                            }
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" Color="Color.Primary" FullWidth="true" OnClick="CancelFirstLogin">
+                            Back to Sign In
+                        </MudButton>
                     </div>
-                    <MudButton ButtonType="ButtonType.Submit"
-                               Variant="Variant.Filled"
-                               Color="Color.Primary"
-                               FullWidth="true"
-                               Size="Size.Large"
-                               Disabled="@_isLoading">
-                        @if (_isLoading)
-                        {
-                            <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
-                        }
-                        else
-                        {
-                            <span>Login to Dashboard</span>
-                        }
-                    </MudButton>
-                </div>
-            </EditForm>
+                </EditForm>
+            }
+            else
+            {
+                <EditForm Model="@_loginModel" OnValidSubmit="@OnLoginAsync">
+                    <DataAnnotationsValidator />
+                    <div class="login-form-fields">
+                        <MudTextField @bind-Value="_loginModel.UserId"
+                                      Label="Username"
+                                      Placeholder="Enter your ID"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Badge" />
+                        <MudTextField @bind-Value="_loginModel.Password"
+                                      Label="Password"
+                                      Placeholder="••••••••"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <div class="login-form-options">
+                            <MudCheckBox T="bool" @bind-Value="_loginModel.RememberMe" Color="Color.Primary">Remember this device</MudCheckBox>
+                            <MudLink Href="#" Underline="Underline.Always" Style="color:#004481;">Forgot Password?</MudLink>
+                        </div>
+                        <MudButton ButtonType="ButtonType.Submit"
+                                   Variant="Variant.Filled"
+                                   Color="Color.Primary"
+                                   FullWidth="true"
+                                   Size="Size.Large"
+                                   Disabled="@_isLoading">
+                            @if (_isLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                            }
+                            else
+                            {
+                                <span>Login to Dashboard</span>
+                            }
+                        </MudButton>
+                    </div>
+                </EditForm>
+            }
 
             <div class="login-form-footer">
                 Need assistance? <MudLink Href="#" Underline="Underline.Always" Style="color:#004481;">Contact Support</MudLink>
@@ -100,8 +165,11 @@
     private const string BrandName = "__PROJECT__";
 
     private readonly LoginRequestDto _loginModel = new();
+    private FirstLoginPasswordDto _firstLoginModel = new();
     private bool _isLoading;
+    private bool _requiresPasswordChange;
     private string? _errorMessage;
+    private string? _successMessage;
 
     private readonly MudTheme LoginTheme = new()
     {
@@ -136,6 +204,19 @@
                 return;
             }
 
+            if (response.RequiresPasswordChange)
+            {
+                _requiresPasswordChange = true;
+                _successMessage = null;
+                _firstLoginModel = new FirstLoginPasswordDto
+                {
+                    UserId = _loginModel.UserId,
+                    CurrentPassword = _loginModel.Password,
+                };
+                _loginModel.Password = string.Empty;
+                return;
+            }
+
             await TokenStorage.SetAccessTokenAsync(response.AccessToken);
             await TokenStorage.SetRefreshTokenAsync(response.RefreshToken);
             AuthStateNotifier.NotifyUserLogin(response.User.UserId);
@@ -158,5 +239,50 @@
         {
             _isLoading = false;
         }
+    }
+
+    private async Task OnFirstLoginPasswordChangeAsync()
+    {
+        _errorMessage = null;
+        _successMessage = null;
+
+        var policyError = PasswordPolicy.Validate(_firstLoginModel.NewPassword);
+        if (policyError != null)
+        {
+            _errorMessage = policyError;
+            return;
+        }
+
+        if (!string.Equals(_firstLoginModel.NewPassword, _firstLoginModel.ConfirmNewPassword, StringComparison.Ordinal))
+        {
+            _errorMessage = "New password and confirmation do not match.";
+            return;
+        }
+
+        _isLoading = true;
+        try
+        {
+            await AuthService.ChangeFirstLoginPasswordAsync(_firstLoginModel);
+            _requiresPasswordChange = false;
+            _firstLoginModel = new FirstLoginPasswordDto();
+            _loginModel.Password = string.Empty;
+            _successMessage = "Password changed successfully. Please sign in with your new password.";
+        }
+        catch (Exception ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private void CancelFirstLogin()
+    {
+        _requiresPasswordChange = false;
+        _firstLoginModel = new FirstLoginPasswordDto();
+        _errorMessage = null;
+        _successMessage = null;
     }
 }

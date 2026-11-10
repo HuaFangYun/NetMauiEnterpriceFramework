@@ -12,23 +12,134 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 
-<MudPaper Elevation="0" Class="dashboard-card">
-    <div class="page-heading">
-        <div>
-            <div class="dashboard-kicker">Dynamic Screen</div>
-            <h1>@(_screen?.Description ?? ScreenId)</h1>
-            <p>Metadata-driven screen from <code>tb_screen_menu</code>.</p>
+<div class="page-heading">
+    <div>
+        <div class="dashboard-kicker">Dynamic Screen</div>
+        <h1>@(_screen?.Description ?? ScreenId)</h1>
+        <p>Metadata-driven screen from <code>tb_screen_menu</code>.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(_ => LoadAsync())">Refresh</MudButton>
+    </div>
+</div>
+
+@if (_error != null)
+{
+    <MudAlert Severity="Severity.Error">@_error</MudAlert>
+}
+
+@if (_screen != null)
+{
+    <MudPaper Elevation="0" Class="dynamic-filter-card">
+        <div class="dynamic-filter-header" @onclick="ToggleFilter">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Color="Color.Primary" />
+            <MudText Typo="Typo.h6">Filter Pencarian</MudText>
+            <MudSpacer />
+            <MudIcon Icon="@(_filterOpen ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                     Size="Size.Small"
+                     Color="Color.Primary" />
         </div>
-        <div class="d-flex gap-2">
-            @if (_screen?.HasButtonAdd == true && _screen.Child?.Type == "modal")
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddChildAsync())">Add</MudButton>
-            }
-            @if (_screen?.HasButtonProcess == true)
+
+        @if (_filterOpen)
+        {
+            <MudGrid Spacing="2" Class="mt-1">
+                @foreach (var field in _screen.Fields.Where(f => f.Type != "h"))
+                {
+                    <MudItem xs="12" sm="6" md="3">
+                        @if (field.Type is "l" or "rb")
+                        {
+                            <MudSelect T="string"
+                                       Value="@GetFilter(field.Id)"
+                                       ValueChanged="@(v => SetFilter(field.Id, v))"
+                                       Label="@field.Label"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Clearable="true">
+                                @foreach (var option in GetOptions(field))
+                                {
+                                    <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>
+                                }
+                            </MudSelect>
+                        }
+                        else if (field.Type == "cb")
+                        {
+                            <MudCheckBox T="bool"
+                                         Value="@IsChecked(field.Id)"
+                                         ValueChanged="@(v => SetBool(field.Id, v))"
+                                         Label="@field.Label"
+                                         Color="Color.Primary" />
+                        }
+                        else
+                        {
+                            <MudTextField T="string"
+                                          Value="@GetFilter(field.Id)"
+                                          ValueChanged="@(v => SetFilter(field.Id, v))"
+                                          Label="@field.Label"
+                                          Placeholder="@Placeholder(field)"
+                                          Variant="Variant.Outlined"
+                                          Margin="Margin.Dense" />
+                        }
+                    </MudItem>
+                }
+
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        @foreach (var column in Columns)
+                        {
+                            <MudSelectItem Value="@column">@column</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
+                        <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
+                        <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6" Class="d-flex align-center gap-2">
+                    @if (_screen.HasButtonLoad == true)
+                    {
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Load</MudButton>
+                    }
+                    <MudButton Variant="Variant.Outlined" Color="Color.Default" OnClick="@(_ => ClearFiltersAsync())">Clear</MudButton>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudPaper>
+
+    <MudPaper Elevation="0" Class="dynamic-table-card">
+        <div class="dynamic-table-toolbar">
+            <MudSpacer />
+            <div class="dynamic-search">
+                <MudTextField T="string"
+                              Value="_search"
+                              ValueChanged="OnSearchChanged"
+                              Placeholder="Search data..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Search" />
+            </div>
+
+            @if (_screen.HasButtonProcess == true)
             {
                 <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="@(_ => ProcessAsync())">Process</MudButton>
             }
-            @if (_screen?.HasButtonImportExcel == true)
+            @if (_screen.HasButtonGenerateTxt == true)
+            {
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.TextSnippet" OnClick="@(_ => ExportTxtAsync())">Export TXT</MudButton>
+            }
+            @if (_screen.HasButtonExportExcel == true)
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" OnClick="@(_ => QueueExportAsync())">Export Excel</MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PictureAsPdf" OnClick="@(_ => QueuePdfExportAsync())">Export PDF</MudButton>
+            }
+            @if (_screen.HasButtonAdd == true && _screen.Child?.Type == "modal")
+            {
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="@(_ => OpenAddChildAsync())">Add</MudButton>
+            }
+            @if (_screen.HasButtonImportExcel == true)
             {
                 @if (ExcelFilePicker.IsNativePickerSupported)
                 {
@@ -46,120 +157,33 @@
                     </label>
                 }
             }
-            @if (_screen?.HasButtonGenerateTxt == true)
+            @if (_screen.HasButtonDelete == true)
             {
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.TextSnippet" OnClick="@(_ => ExportTxtAsync())">Export TXT</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Error" StartIcon="@Icons.Material.Filled.Delete" Disabled="@(_selectedRows.Count == 0)" OnClick="@(_ => DeleteSelectedAsync())">Delete</MudButton>
             }
-            @if (_screen?.HasButtonExportExcel == true)
-            {
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Download" OnClick="@(_ => QueueExportAsync())">Export Excel</MudButton>
-                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PictureAsPdf" OnClick="@(_ => QueuePdfExportAsync())">Export PDF</MudButton>
-            }
-            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(_ => LoadAsync())">Refresh</MudButton>
         </div>
-    </div>
 
-    @if (_error != null)
-    {
-        <MudAlert Severity="Severity.Error">@_error</MudAlert>
-    }
-
-    @if (_screen != null)
-    {
-        <MudGrid Spacing="2" Class="mb-4">
-            <MudItem xs="12" md="4">
-                <MudTextField @bind-Value="_search"
-                              Label="Search"
-                              Variant="Variant.Outlined"
-                              Margin="Margin.Dense"
-                              Adornment="Adornment.Start"
-                              AdornmentIcon="@Icons.Material.Filled.Search" />
-            </MudItem>
-
-            @foreach (var field in _screen.Fields.Where(f => f.Type != "h"))
-            {
-                <MudItem xs="12" md="4">
-                    @if (field.Type is "l" or "rb")
-                    {
-                        <MudSelect T="string"
-                                   Value="@GetFilter(field.Id)"
-                                   ValueChanged="@(v => SetFilter(field.Id, v))"
-                                   Label="@field.Label"
-                                   Variant="Variant.Outlined"
-                                   Margin="Margin.Dense"
-                                   Clearable="true">
-                            @foreach (var option in GetOptions(field))
-                            {
-                                <MudSelectItem Value="@option.Value">@option.Text</MudSelectItem>
-                            }
-                        </MudSelect>
-                    }
-                    else if (field.Type == "cb")
-                    {
-                        <MudCheckBox T="bool"
-                                     Value="@IsChecked(field.Id)"
-                                     ValueChanged="@(v => SetBool(field.Id, v))"
-                                     Label="@field.Label"
-                                     Color="Color.Primary" />
-                    }
-                    else
-                    {
-                        <MudTextField T="string"
-                                      Value="@GetFilter(field.Id)"
-                                      ValueChanged="@(v => SetFilter(field.Id, v))"
-                                      Label="@field.Label"
-                                      Placeholder="@Placeholder(field)"
-                                      Variant="Variant.Outlined"
-                                      Margin="Margin.Dense" />
-                    }
-                </MudItem>
-            }
-
-            <MudItem xs="12" md="4">
-                <MudSelect T="string" @bind-Value="_sortColumn" Label="Sort by" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    @foreach (var column in Columns)
-                    {
-                        <MudSelectItem Value="@column">@column</MudSelectItem>
-                    }
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" md="4">
-                <MudSelect T="string" @bind-Value="_sortDirection" Label="Direction" Variant="Variant.Outlined" Margin="Margin.Dense">
-                    <MudSelectItem Value="@("asc")">Ascending</MudSelectItem>
-                    <MudSelectItem Value="@("desc")">Descending</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(_ => ReloadAsync())">Load</MudButton>
-                <MudButton Variant="Variant.Text" OnClick="@(_ => ResetAsync())">Reset</MudButton>
-            </MudItem>
-        </MudGrid>
-    }
-
-    @if (_screen != null)
-    {
         <MudTable T="Dictionary<string, object>"
                   @ref="_table"
                   ServerData="LoadServerData"
                   Hover="true"
                   Dense="true"
                   Breakpoint="Breakpoint.Sm"
-                  Elevation="0">
+                  Elevation="0"
+                  MultiSelection="@(_screen.HasButtonDelete == true)"
+                  @bind-SelectedItems="_selectedRows"
+                  SelectOnRowClick="false">
             <HeaderContent>
-                @foreach (var column in Columns)
-                {
-                    <MudTh>@column</MudTh>
-                }
                 @if (ShowActions)
                 {
                     <MudTh>Actions</MudTh>
                 }
-            </HeaderContent>
-            <RowTemplate>
                 @foreach (var column in Columns)
                 {
-                    <MudTd DataLabel="@column">@Format(context.GetValueOrDefault(column))</MudTd>
+                    <MudTh>@column</MudTh>
                 }
+            </HeaderContent>
+            <RowTemplate>
                 @if (ShowActions)
                 {
                     <MudTd DataLabel="Actions">
@@ -177,6 +201,10 @@
                         }
                     </MudTd>
                 }
+                @foreach (var column in Columns)
+                {
+                    <MudTd DataLabel="@column">@Format(context.GetValueOrDefault(column))</MudTd>
+                }
             </RowTemplate>
             <NoRecordsContent>
                 <MudText>No data.</MudText>
@@ -188,8 +216,8 @@
                 <MudTablePager PageSizeOptions="new[] { 10, 25, 50, 100 }" />
             </PagerContent>
         </MudTable>
-    }
-</MudPaper>
+    </MudPaper>
+}
 
 @code {
     [Parameter]
@@ -205,6 +233,8 @@
     private string _sortDirection = "asc";
     private string? _error;
     private bool _importing;
+    private bool _filterOpen = true;
+    private HashSet<Dictionary<string, object>> _selectedRows = new();
 
     private IEnumerable<string> Columns => _result?.Columns ?? Enumerable.Empty<string>();
     private bool ShowActions => _screen?.HasActionRow == true
@@ -304,6 +334,31 @@
     }
 
     private async Task LoadAsync() => await ReloadAsync();
+
+    private void ToggleFilter() => _filterOpen = !_filterOpen;
+
+    private async Task OnSearchChanged(string? value)
+    {
+        _search = value;
+        _selectedRows.Clear();
+        await ReloadAsync();
+    }
+
+    private async Task ClearFiltersAsync()
+    {
+        foreach (var field in _screen?.Fields ?? new List<DynamicFieldDto>())
+        {
+            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra)
+                ? field.Extra
+                : string.Empty;
+        }
+
+        _search = null;
+        _sortColumn = null;
+        _sortDirection = "asc";
+        _selectedRows.Clear();
+        await ReloadAsync();
+    }
 
     private async Task QueueExportAsync()
     {
@@ -467,21 +522,88 @@
 
         var response = await DynamicApi.DeleteAsync(ScreenId!, new DynamicMutationRequestDto
         {
-            Values = row.ToDictionary(e => e.Key, e => (string?)ToText(e.Value), StringComparer.OrdinalIgnoreCase),
+            Values = RowValues(row),
         });
         Snackbar.Add(response.Message ?? "Delete failed.", response.Success ? Severity.Success : Severity.Error);
+        if (response.Success)
+        {
+            _selectedRows.Remove(row);
+        }
+
+        await ReloadAsync();
+    }
+
+    private async Task DeleteSelectedAsync()
+    {
+        if (_selectedRows.Count == 0)
+        {
+            Snackbar.Add("Select at least one record.", Severity.Warning);
+            return;
+        }
+
+        var parameters = new DialogParameters
+        {
+            ["Title"] = "Delete Selected Records",
+            ["Message"] = $"Delete {_selectedRows.Count} selected record(s)?",
+            ["ConfirmText"] = "Delete",
+        };
+        var dialog = await DialogService.ShowAsync<ConfirmDialog>("Delete Selected Records", parameters);
+        var result = await dialog.Result;
+        if (result is not { Canceled: false })
+        {
+            return;
+        }
+
+        var deleted = 0;
+        foreach (var row in _selectedRows.ToList())
+        {
+            var response = await DynamicApi.DeleteAsync(ScreenId!, new DynamicMutationRequestDto
+            {
+                Values = RowValues(row),
+            });
+            if (response.Success)
+            {
+                deleted++;
+            }
+        }
+
+        _selectedRows.Clear();
+        Snackbar.Add($"{deleted} record(s) deleted.", deleted > 0 ? Severity.Success : Severity.Error);
         await ReloadAsync();
     }
 
     private async Task ProcessAsync()
     {
-        var response = await DynamicApi.ProcessAsync(ScreenId!, new DynamicMutationRequestDto
+        if (_selectedRows.Count > 0)
+        {
+            var processed = 0;
+            foreach (var row in _selectedRows)
+            {
+                var response = await DynamicApi.ProcessAsync(ScreenId!, new DynamicMutationRequestDto
+                {
+                    Values = RowValues(row),
+                });
+                if (response.Success)
+                {
+                    processed++;
+                }
+            }
+
+            Snackbar.Add($"{processed} record(s) processed.", processed > 0 ? Severity.Success : Severity.Error);
+            await ReloadAsync();
+            return;
+        }
+
+        var bulkResponse = await DynamicApi.ProcessAsync(ScreenId!, new DynamicMutationRequestDto
         {
             Values = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
         });
-        Snackbar.Add(response.Message ?? "Process completed.", response.Success ? Severity.Success : Severity.Error);
+        Snackbar.Add(bulkResponse.Message ?? "Process completed.", bulkResponse.Success ? Severity.Success : Severity.Error);
         await ReloadAsync();
     }
+
+    private static Dictionary<string, string?> RowValues(Dictionary<string, object> row)
+        => row.ToDictionary(e => e.Key, e => (string?)ToText(e.Value), StringComparer.OrdinalIgnoreCase);
 
     private async Task PickImportAsync()
     {
@@ -582,17 +704,6 @@
         bool boolean => boolean ? "1" : "0",
         _ => Convert.ToString(value) ?? string.Empty,
     };
-    private async Task ResetAsync()
-    {
-        foreach (var field in _screen?.Fields ?? new List<DynamicFieldDto>())
-        {
-            _filters[field.Id] = field.Type == "h" && !string.IsNullOrWhiteSpace(field.Extra) ? field.Extra : string.Empty;
-        }
-
-        _search = null;
-        await ReloadAsync();
-    }
-
     private string? GetFilter(string id) => _filters.GetValueOrDefault(id);
 
     private void SetFilter(string id, string? value) => _filters[id] = value ?? string.Empty;

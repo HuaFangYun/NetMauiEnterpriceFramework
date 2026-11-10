@@ -660,7 +660,6 @@ public class DynamicEngineService : IDynamicEngineService
 
         var direction = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase) ? "DESC" : "ASC";
         var offset = (page - 1) * pageSize;
-        var countQuery = $"SELECT COUNT(*) FROM ({query}) q";
 
         await using var connection = new SqlConnection(_context.Database.GetConnectionString());
         await connection.OpenAsync();
@@ -676,20 +675,39 @@ public class DynamicEngineService : IDynamicEngineService
             }
         }
 
+        var sourceQuery = query;
+        var searchTerm = request.SearchTerm?.Trim();
+        var isSearching = !string.IsNullOrWhiteSpace(searchTerm) && resultColumns.Count > 0;
+        if (isSearching)
+        {
+            var searchColumns = string.Join(" OR ", resultColumns.Select(column =>
+                $"CAST(src.[{column.Replace("]", "]]", StringComparison.Ordinal)}] AS nvarchar(max)) LIKE @search"));
+            sourceQuery = $"SELECT * FROM ({query}) src WHERE {searchColumns}";
+        }
+
+        var countQuery = $"SELECT COUNT(*) FROM ({sourceQuery}) q";
         var resolvedSort = resultColumns.FirstOrDefault(e => e.Equals(request.SortColumn, StringComparison.OrdinalIgnoreCase))
                            ?? resultColumns.FirstOrDefault()
                            ?? sortColumn;
         var orderBy = resolvedSort == "1" ? "(SELECT NULL)" : $"[{resolvedSort}]";
-        var dataQuery = $"SELECT * FROM ({query}) q ORDER BY {orderBy} {direction} OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
+        var dataQuery = $"SELECT * FROM ({sourceQuery}) q ORDER BY {orderBy} {direction} OFFSET @offset ROWS FETCH NEXT @pageSize ROWS ONLY";
 
         var countCommand = new SqlCommand(countQuery, connection) { CommandTimeout = 120 };
         AddParameters(countCommand, tokens, values, likeModes, skipTotal: true);
+        if (isSearching)
+        {
+            countCommand.Parameters.AddWithValue("@search", $"%{searchTerm}%");
+        }
         var total = Convert.ToInt32(await countCommand.ExecuteScalarAsync(), CultureInfo.InvariantCulture);
 
         var dataCommand = new SqlCommand(dataQuery, connection) { CommandTimeout = 120 };
         dataCommand.Parameters.AddWithValue("@offset", offset);
         dataCommand.Parameters.AddWithValue("@pageSize", pageSize);
         AddParameters(dataCommand, tokens, values, likeModes, skipTotal: true);
+        if (isSearching)
+        {
+            dataCommand.Parameters.AddWithValue("@search", $"%{searchTerm}%");
+        }
 
         var (columns, rows) = await ReadRowsAsync(dataCommand);
         return new DynamicLoadResultDto
