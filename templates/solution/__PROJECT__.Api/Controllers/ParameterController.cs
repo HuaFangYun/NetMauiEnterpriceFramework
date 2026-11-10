@@ -29,6 +29,7 @@ public class ParameterController : ControllerBase
     }
 
     [HttpGet("{tableName}/fields")]
+    [HttpGet("fields/{tableName}")]
     public async Task<IActionResult> GetFields(string tableName)
     {
         try

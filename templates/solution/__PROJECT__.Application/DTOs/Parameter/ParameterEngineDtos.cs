@@ -63,15 +63,34 @@ public class ParameterCardDto
 
 public class ParameterFieldDto
 {
-    public string FieldName { get; set; } = string.Empty;
+    public string Id { get; set; } = string.Empty;
+    public string FieldId { get; set; } = string.Empty;
     public string? FieldDesc { get; set; }
     public string? FieldType { get; set; }
+
+    [JsonIgnore]
     public string? FieldReff { get; set; }
+
     public bool IsMandatory { get; set; }
-    public bool IsKey { get; set; }
+    public bool FieldKey { get; set; }
+    public bool IsGroupBy { get; set; }
     public bool IsOrderable { get; set; }
     public int OrderSeq { get; set; }
     public string? AddClass { get; set; }
+
+    [JsonIgnore]
+    public string FieldName
+    {
+        get => ParameterReference.Decode(FieldId);
+        set => FieldId = ParameterReference.Encode(value);
+    }
+
+    [JsonIgnore]
+    public bool IsKey
+    {
+        get => FieldKey;
+        set => FieldKey = value;
+    }
 }
 
 public class ParameterListResponseDto : PaginatedResponse<Dictionary<string, string>>

@@ -18,19 +18,22 @@ public class AuthService : IAuthService
     private readonly IPasswordHasherService _passwordHasher;
     private readonly ICurrentUserService _currentUser;
     private readonly IConfiguration _configuration;
+    private readonly IUserSessionNotifier _sessionNotifier;
 
     public AuthService(
         IUnitOfWork unitOfWork,
         IJWTService jwtService,
         IPasswordHasherService passwordHasher,
         ICurrentUserService currentUser,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IUserSessionNotifier sessionNotifier)
     {
         _unitOfWork = unitOfWork;
         _jwtService = jwtService;
         _passwordHasher = passwordHasher;
         _currentUser = currentUser;
         _configuration = configuration;
+        _sessionNotifier = sessionNotifier;
     }
 
     public async Task<LoginResponseDto> LoginAsync(LoginRequestDto request)
@@ -96,6 +99,7 @@ public class AuthService : IAuthService
             throw new AuthenticationException("Account is locked. Please contact administrator.");
         }
 
+        var previousSessionId = flag.session_id;
         flag.failed_password_attempt_count = 0;
         flag.failed_password_attempt_date = null;
         flag.last_login_date = DateTime.Now;
@@ -106,6 +110,11 @@ public class AuthService : IAuthService
         await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
         await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(user.user_id);
         await _unitOfWork.SaveChangesAsync();
+
+        if (!string.Equals(previousSessionId, sessionId, StringComparison.Ordinal))
+        {
+            await _sessionNotifier.NotifySessionRevokedAsync(user.user_id, previousSessionId);
+        }
 
         var accessToken = _jwtService.GenerateAccessToken(user, new[] { role }, sessionId);
         var rawRefreshToken = _jwtService.GenerateRefreshToken();
@@ -198,6 +207,14 @@ public class AuthService : IAuthService
     public async Task LogoutAsync(string userId, string refreshToken)
     {
         await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(userId);
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(userId);
+        if (flag != null)
+        {
+            flag.is_login = false;
+            flag.session_id = null;
+            await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
+        }
+
         await _unitOfWork.SaveChangesAsync();
     }
 

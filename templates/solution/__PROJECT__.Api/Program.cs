@@ -73,6 +73,7 @@ builder.Services.AddScoped<IApprovalService, ApprovalService>();
 builder.Services.AddScoped<IParameterEngineService, ParameterEngineService>();
 builder.Services.AddScoped<IDynamicEngineService, DynamicEngineService>();
 builder.Services.AddScoped<IScreenMenuEditorService, ScreenMenuEditorService>();
+builder.Services.AddScoped<IUserSessionNotifier, UserSessionNotifier>();
 builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ExcelExportJob>();
@@ -206,6 +207,7 @@ app.UseRouting();
 app.UseCors("AppClient");
 app.UseIpRateLimiting();
 app.UseAuthentication();
+app.UseMiddleware<ActiveSessionMiddleware>();
 app.UseAuthorization();
 app.UseWebSockets();
 

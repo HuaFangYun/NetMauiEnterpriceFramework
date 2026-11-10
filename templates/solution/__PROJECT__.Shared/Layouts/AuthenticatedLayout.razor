@@ -314,6 +314,16 @@
             });
         });
 
+        _hub.On<string>("SessionRevoked", message =>
+        {
+            _ = InvokeAsync(async () =>
+            {
+                await TokenStorage.RemoveTokensAsync();
+                AuthStateNotifier.NotifyUserLogout();
+                Navigation.NavigateTo("/", true);
+            });
+        });
+
         try
         {
             await _hub.StartAsync();

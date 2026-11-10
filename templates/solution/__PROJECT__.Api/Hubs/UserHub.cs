@@ -14,6 +14,12 @@ public class UserHub : Hub
         if (!string.IsNullOrWhiteSpace(userId))
         {
             await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+
+            var sessionId = Context.User?.FindFirst("session_id")?.Value;
+            if (!string.IsNullOrWhiteSpace(sessionId))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"{userId}:{sessionId}");
+            }
         }
 
         await base.OnConnectedAsync();

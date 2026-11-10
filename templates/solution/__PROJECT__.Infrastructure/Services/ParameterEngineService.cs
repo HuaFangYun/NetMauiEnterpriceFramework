@@ -85,19 +85,25 @@ public class ParameterEngineService : IParameterEngineService
             .OrderBy(e => e.order_seq)
             .Select(e => new ParameterFieldDto
             {
-                FieldName = e.field_name,
+                FieldId = e.field_name,
                 FieldDesc = e.field_desc,
                 FieldType = e.field_type,
                 FieldReff = e.field_reff,
                 IsMandatory = e.is_mandatory == true,
-                IsKey = e.field_key == true,
+                FieldKey = e.field_key == true,
+                IsGroupBy = e.is_group_by == true,
                 IsOrderable = e.is_orderable == true,
                 OrderSeq = e.order_seq,
                 AddClass = e.add_class,
             })
             .ToListAsync();
 
-        return fields.Count > 0 ? fields : await IntrospectFieldsAsync(tableName);
+        if (fields.Count == 0)
+        {
+            return await IntrospectFieldsAsync(tableName);
+        }
+
+        return ApplyFieldIds(fields, tableName);
     }
 
     public async Task<Dictionary<string, List<DropdownItemDto>>> GetOptionsAsync(string tableName)
@@ -677,12 +683,24 @@ public class ParameterEngineService : IParameterEngineService
             var type = MapSqlType(reader.GetString(1));
             fields.Add(new ParameterFieldDto
             {
-                FieldName = name,
+                FieldId = name,
                 FieldDesc = name,
                 FieldType = type,
-                IsKey = fields.Count == 0,
+                FieldKey = fields.Count == 0,
                 OrderSeq = fields.Count + 1,
             });
+        }
+
+        return ApplyFieldIds(fields, tableName);
+    }
+
+    private static List<ParameterFieldDto> ApplyFieldIds(List<ParameterFieldDto> fields, string tableName)
+    {
+        var tableId = ParameterReference.Encode(tableName);
+        foreach (var field in fields)
+        {
+            field.FieldId = ParameterReference.Encode(field.FieldId);
+            field.Id = tableId;
         }
 
         return fields;

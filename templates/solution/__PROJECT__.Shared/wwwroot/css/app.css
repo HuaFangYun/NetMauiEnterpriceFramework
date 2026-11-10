@@ -895,7 +895,7 @@ html, body {
     max-width: none;
     overflow: visible;
     text-overflow: clip;
-    animation: sidebar-marquee 6s linear infinite alternate;
+    animation: sidebar-marquee 6s linear infinite;
 }
 
 .sidebar-arrow {
@@ -914,7 +914,7 @@ html, body {
     }
 
     to {
-        transform: translateX(calc(-100% + 150px));
+        transform: translateX(calc(-100% + 114px));
     }
 }
 
