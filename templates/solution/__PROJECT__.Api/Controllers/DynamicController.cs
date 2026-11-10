@@ -195,6 +195,7 @@ public class DynamicController : ControllerBase
         }
         catch (UnauthorizedAccessException ex)
         {
+            await _errorLog.LogAsync("Dynamic", "ERROR", ex);
             return Forbid(ex.Message);
         }
         catch (InvalidOperationException ex)

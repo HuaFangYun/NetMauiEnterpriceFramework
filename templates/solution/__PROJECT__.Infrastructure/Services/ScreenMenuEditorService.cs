@@ -13,12 +13,20 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
 {
     private readonly __PROJECT__DbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IErrorLogService _errorLog;
 
-    public ScreenMenuEditorService(__PROJECT__DbContext context, ICurrentUserService currentUser)
+    public ScreenMenuEditorService(
+        __PROJECT__DbContext context,
+        ICurrentUserService currentUser,
+        IErrorLogService errorLog)
     {
         _context = context;
         _currentUser = currentUser;
+        _errorLog = errorLog;
     }
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("ScreenMenuEditor", "ERROR", exception);
 
     public async Task<GeneralListResponseDto<ScreenMenuListItemDto>> GetListAsync(DataTableRequestDto request)
     {
@@ -220,6 +228,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }

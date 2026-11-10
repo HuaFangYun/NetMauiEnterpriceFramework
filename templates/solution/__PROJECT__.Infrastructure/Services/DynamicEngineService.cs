@@ -22,12 +22,20 @@ public class DynamicEngineService : IDynamicEngineService
 {
     private readonly __PROJECT__DbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IErrorLogService _errorLog;
 
-    public DynamicEngineService(__PROJECT__DbContext context, ICurrentUserService currentUser)
+    public DynamicEngineService(
+        __PROJECT__DbContext context,
+        ICurrentUserService currentUser,
+        IErrorLogService errorLog)
     {
         _context = context;
         _currentUser = currentUser;
+        _errorLog = errorLog;
     }
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("DynamicEngine", "ERROR", exception);
 
     public async Task<DynamicScreenDto?> GetScreenAsync(string screenId)
     {
@@ -363,6 +371,7 @@ public class DynamicEngineService : IDynamicEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail($"Import failed: {ex.Message}");
         }
     }
@@ -906,6 +915,7 @@ public class DynamicEngineService : IDynamicEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }

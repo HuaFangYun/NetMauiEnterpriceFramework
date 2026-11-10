@@ -36,15 +36,24 @@ public class ParameterEngineService : IParameterEngineService
     private readonly __PROJECT__DbContext _context;
     private readonly AuditLogDbContext _audit;
     private readonly ICurrentUserService _currentUser;
+    private readonly IErrorLogService _errorLog;
 
-    public ParameterEngineService(__PROJECT__DbContext context, AuditLogDbContext audit, ICurrentUserService currentUser)
+    public ParameterEngineService(
+        __PROJECT__DbContext context,
+        AuditLogDbContext audit,
+        ICurrentUserService currentUser,
+        IErrorLogService errorLog)
     {
         _context = context;
         _audit = audit;
         _currentUser = currentUser;
+        _errorLog = errorLog;
     }
 
     private string Actor => _currentUser.UserId ?? "system";
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("ParameterEngine", "ERROR", exception);
 
     public async Task<List<ParameterCardDto>> GetCardsAsync()
     {
@@ -138,8 +147,9 @@ public class ParameterEngineService : IParameterEngineService
                 }
                 result[field.FieldName] = options;
             }
-            catch
+            catch (Exception ex)
             {
+                await LogErrorAsync(ex);
                 result[field.FieldName] = new List<DropdownItemDto>();
             }
         }
@@ -388,6 +398,7 @@ public class ParameterEngineService : IParameterEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -443,6 +454,7 @@ public class ParameterEngineService : IParameterEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -647,6 +659,7 @@ public class ParameterEngineService : IParameterEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }
@@ -851,6 +864,7 @@ public class ParameterEngineService : IParameterEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail($"Import approval failed: {ex.Message}");
         }
     }
@@ -975,6 +989,7 @@ public class ParameterEngineService : IParameterEngineService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }

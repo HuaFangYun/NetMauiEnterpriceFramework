@@ -14,13 +14,22 @@ public class MenuManagementService : IMenuManagementService
     private readonly __PROJECT__DbContext _context;
     private readonly ICurrentUserService _currentUser;
     private readonly IParameterStagingService _staging;
+    private readonly IErrorLogService _errorLog;
 
-    public MenuManagementService(__PROJECT__DbContext context, ICurrentUserService currentUser, IParameterStagingService staging)
+    public MenuManagementService(
+        __PROJECT__DbContext context,
+        ICurrentUserService currentUser,
+        IParameterStagingService staging,
+        IErrorLogService errorLog)
     {
         _context = context;
         _currentUser = currentUser;
         _staging = staging;
+        _errorLog = errorLog;
     }
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("MenuManagement", "ERROR", exception);
 
     public async Task<GeneralListResponseDto<MenuListItemDto>> GetListAsync(DataTableRequestDto request)
     {
@@ -118,6 +127,7 @@ public class MenuManagementService : IMenuManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -164,6 +174,7 @@ public class MenuManagementService : IMenuManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -197,6 +208,7 @@ public class MenuManagementService : IMenuManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -321,6 +333,7 @@ public class MenuManagementService : IMenuManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }

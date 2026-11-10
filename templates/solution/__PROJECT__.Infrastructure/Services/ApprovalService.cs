@@ -15,20 +15,26 @@ public class ApprovalService : IApprovalService
     private readonly AuditLogDbContext _audit;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notificationService;
+    private readonly IErrorLogService _errorLog;
 
     public ApprovalService(
         __PROJECT__DbContext context,
         AuditLogDbContext audit,
         ICurrentUserService currentUser,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IErrorLogService errorLog)
     {
         _context = context;
         _audit = audit;
         _currentUser = currentUser;
         _notificationService = notificationService;
+        _errorLog = errorLog;
     }
 
     private string Actor => _currentUser.UserId ?? "system";
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("Approval", "ERROR", exception);
 
     public async Task<GeneralListResponseDto<UserApprovalListItemDto>> GetPendingUsersAsync(DataTableRequestDto request)
     {
@@ -203,6 +209,7 @@ public class ApprovalService : IApprovalService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }
@@ -360,6 +367,7 @@ public class ApprovalService : IApprovalService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }
@@ -547,6 +555,7 @@ public class ApprovalService : IApprovalService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }
@@ -756,6 +765,7 @@ public class ApprovalService : IApprovalService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             await transaction.RollbackAsync();
             return Fail(ex.Message);
         }
@@ -904,9 +914,9 @@ public class ApprovalService : IApprovalService
                 null,
                 NotificationTypeIds.Approval);
         }
-        catch
+        catch (Exception ex)
         {
-            // Notification failure must not reverse an approved business transaction.
+            await LogErrorAsync(ex);
         }
     }
 

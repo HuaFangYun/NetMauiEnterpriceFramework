@@ -13,12 +13,20 @@ public class GroupManagementService : IGroupManagementService
 {
     private readonly __PROJECT__DbContext _context;
     private readonly ICurrentUserService _currentUser;
+    private readonly IErrorLogService _errorLog;
 
-    public GroupManagementService(__PROJECT__DbContext context, ICurrentUserService currentUser)
+    public GroupManagementService(
+        __PROJECT__DbContext context,
+        ICurrentUserService currentUser,
+        IErrorLogService errorLog)
     {
         _context = context;
         _currentUser = currentUser;
+        _errorLog = errorLog;
     }
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("GroupManagement", "ERROR", exception);
 
     public async Task<GeneralListResponseDto<GroupListItemDto>> GetListAsync(DataTableRequestDto request)
     {
@@ -113,6 +121,7 @@ public class GroupManagementService : IGroupManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -150,6 +159,7 @@ public class GroupManagementService : IGroupManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -197,6 +207,7 @@ public class GroupManagementService : IGroupManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }

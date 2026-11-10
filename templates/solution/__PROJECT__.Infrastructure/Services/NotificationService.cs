@@ -13,11 +13,16 @@ public class NotificationService : INotificationService
 {
     private readonly __PROJECT__DbContext _context;
     private readonly INotificationPusher _pusher;
+    private readonly IErrorLogService _errorLog;
 
-    public NotificationService(__PROJECT__DbContext context, INotificationPusher pusher)
+    public NotificationService(
+        __PROJECT__DbContext context,
+        INotificationPusher pusher,
+        IErrorLogService errorLog)
     {
         _context = context;
         _pusher = pusher;
+        _errorLog = errorLog;
     }
 
     public async Task<List<NotificationDto>> GetRecentAsync(string userId, int top = 20)
@@ -133,9 +138,9 @@ public class NotificationService : INotificationService
                 CreatedDate = notification.created_date,
             });
         }
-        catch
+        catch (Exception ex)
         {
-            // Real-time delivery is best-effort; the notification stays in the database.
+            await _errorLog.LogAsync("Notification", "ERROR", ex);
         }
     }
 

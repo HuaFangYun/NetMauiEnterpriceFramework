@@ -14,13 +14,22 @@ public class UserManagementService : IUserManagementService
     private readonly __PROJECT__DbContext _context;
     private readonly IPasswordHasherService _passwordHasher;
     private readonly ICurrentUserService _currentUser;
+    private readonly IErrorLogService _errorLog;
 
-    public UserManagementService(__PROJECT__DbContext context, IPasswordHasherService passwordHasher, ICurrentUserService currentUser)
+    public UserManagementService(
+        __PROJECT__DbContext context,
+        IPasswordHasherService passwordHasher,
+        ICurrentUserService currentUser,
+        IErrorLogService errorLog)
     {
         _context = context;
         _passwordHasher = passwordHasher;
         _currentUser = currentUser;
+        _errorLog = errorLog;
     }
+
+    private Task LogErrorAsync(Exception exception)
+        => _errorLog.LogAsync("UserManagement", "ERROR", exception);
 
     public async Task<GeneralListResponseDto<UserListItemDto>> GetListAsync(DataTableRequestDto request)
     {
@@ -195,6 +204,7 @@ public class UserManagementService : IUserManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -237,6 +247,7 @@ public class UserManagementService : IUserManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }
@@ -280,6 +291,7 @@ public class UserManagementService : IUserManagementService
         }
         catch (Exception ex)
         {
+            await LogErrorAsync(ex);
             return Fail(ex.Message);
         }
     }

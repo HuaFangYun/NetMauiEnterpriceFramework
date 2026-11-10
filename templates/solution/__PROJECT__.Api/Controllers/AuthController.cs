@@ -15,10 +15,12 @@ namespace __PROJECT__.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IErrorLogService _errorLog;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IErrorLogService errorLog)
     {
         _authService = authService;
+        _errorLog = errorLog;
     }
 
     [HttpPost("login")]
@@ -32,6 +34,7 @@ public class AuthController : ControllerBase
         }
         catch (AuthenticationException ex)
         {
+            await _errorLog.LogAsync("Auth", "ERROR", ex);
             return Unauthorized(new { message = ex.Message });
         }
     }
@@ -47,6 +50,7 @@ public class AuthController : ControllerBase
         }
         catch (AuthenticationException ex)
         {
+            await _errorLog.LogAsync("Auth", "ERROR", ex);
             return Unauthorized(new { message = ex.Message });
         }
     }
@@ -100,6 +104,7 @@ public class AuthController : ControllerBase
         }
         catch (AuthenticationException ex)
         {
+            await _errorLog.LogAsync("Auth", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<UserResponseDto>(ex.Message));
         }
     }
@@ -121,6 +126,7 @@ public class AuthController : ControllerBase
         }
         catch (AuthenticationException ex)
         {
+            await _errorLog.LogAsync("Auth", "ERROR", ex);
             return BadRequest(ApiResponseFactory.Error<string>(ex.Message));
         }
     }

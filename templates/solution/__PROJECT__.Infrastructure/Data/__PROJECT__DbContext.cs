@@ -1,14 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 
+using __PROJECT__.Application.Interfaces;
 using __PROJECT__.Domain.Entities;
 
 namespace __PROJECT__.Infrastructure.Data;
 
 public class __PROJECT__DbContext : DbContext
 {
-    public __PROJECT__DbContext(DbContextOptions<__PROJECT__DbContext> options)
+    private readonly AuditLogDbContext? _audit;
+    private readonly ICurrentUserService? _currentUser;
+
+    public __PROJECT__DbContext(
+        DbContextOptions<__PROJECT__DbContext> options,
+        AuditLogDbContext? audit = null,
+        ICurrentUserService? currentUser = null)
         : base(options)
     {
+        _audit = audit;
+        _currentUser = currentUser;
     }
 
     public DbSet<enum_approval_type> enum_approval_type => Set<enum_approval_type>();
@@ -53,6 +63,139 @@ public class __PROJECT__DbContext : DbContext
     public DbSet<rf_message> rf_message => Set<rf_message>();
 
     public DbSet<proc_seq> proc_seq => Set<proc_seq>();
+
+    public override int SaveChanges()
+    {
+        var auditRecords = CaptureAuditRecords();
+        var result = base.SaveChanges();
+        WriteAuditRecordsAsync(auditRecords).GetAwaiter().GetResult();
+        return result;
+    }
+
+    public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        var auditRecords = CaptureAuditRecords();
+        var result = await base.SaveChangesAsync(cancellationToken);
+        await WriteAuditRecordsAsync(auditRecords, cancellationToken);
+        return result;
+    }
+
+    private List<AuditRecord> CaptureAuditRecords()
+    {
+        var records = new List<AuditRecord>();
+        if (_audit == null)
+        {
+            return records;
+        }
+
+        var actor = _currentUser?.UserId ?? "system";
+        var now = DateTime.Now;
+
+        foreach (var entry in ChangeTracker.Entries()
+                     .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        {
+            var headerId = Guid.NewGuid();
+            var header = new tb_audit_trail
+            {
+                id = headerId,
+                entity = entry.Metadata.ClrType.Name,
+                table_name = entry.Metadata.GetTableName() ?? entry.Metadata.ClrType.Name,
+                created_by = actor,
+                created_date = now,
+            };
+
+            var details = new List<tb_audit_trail_detail>();
+            switch (entry.State)
+            {
+                case EntityState.Added:
+                    header.type = "insert";
+                    AddDetails(details, headerId, entry, includeBefore: false);
+                    break;
+
+                case EntityState.Modified:
+                    header.type = "update";
+                    AddModifiedDetails(details, headerId, entry);
+                    break;
+
+                case EntityState.Deleted:
+                    header.type = "delete";
+                    AddDetails(details, headerId, entry, includeBefore: true);
+                    break;
+            }
+
+            if (details.Count > 0)
+            {
+                records.Add(new AuditRecord(header, details));
+            }
+        }
+
+        return records;
+    }
+
+    private static void AddDetails(
+        List<tb_audit_trail_detail> details,
+        Guid headerId,
+        EntityEntry entry,
+        bool includeBefore)
+    {
+        foreach (var property in entry.Properties)
+        {
+            details.Add(new tb_audit_trail_detail
+            {
+                tb_audit_trail_id = headerId,
+                column_name = property.Metadata.Name,
+                value = includeBefore ? null : property.CurrentValue?.ToString(),
+                value_before = includeBefore ? property.OriginalValue?.ToString() : null,
+            });
+        }
+    }
+
+    private static void AddModifiedDetails(
+        List<tb_audit_trail_detail> details,
+        Guid headerId,
+        EntityEntry entry)
+    {
+        foreach (var property in entry.Properties.Where(p => p.IsModified))
+        {
+            if (Equals(property.OriginalValue, property.CurrentValue))
+            {
+                continue;
+            }
+
+            details.Add(new tb_audit_trail_detail
+            {
+                tb_audit_trail_id = headerId,
+                column_name = property.Metadata.Name,
+                value = property.CurrentValue?.ToString(),
+                value_before = property.OriginalValue?.ToString(),
+            });
+        }
+    }
+
+    private async Task WriteAuditRecordsAsync(
+        List<AuditRecord> records,
+        CancellationToken cancellationToken = default)
+    {
+        if (_audit == null || records.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            foreach (var record in records)
+            {
+                await _audit.tb_audit_trail.AddAsync(record.Header, cancellationToken);
+                await _audit.tb_audit_trail_detail.AddRangeAsync(record.Details, cancellationToken);
+            }
+
+            await _audit.SaveChangesAsync(cancellationToken);
+        }
+        catch
+        {
+            // Audit persistence must never make a successful business save fail.
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -188,4 +331,6 @@ public class __PROJECT__DbContext : DbContext
         modelBuilder.Entity<rf_group_access_report_set>().HasKey(e => e.id);
         modelBuilder.Entity<rf_message>().HasKey(e => e.message_code);
     }
+
+    private sealed record AuditRecord(tb_audit_trail Header, List<tb_audit_trail_detail> Details);
 }
