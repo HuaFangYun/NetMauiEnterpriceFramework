@@ -15,23 +15,50 @@
 
 <MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
 
-<MudLayout Class="@(_isDarkMode ? "app-dark" : "app-light")">
+<MudLayout Class="@(_isDarkMode ? "app-dark" : "app-light")" @onclick="CloseSearch">
     <MudAppBar Elevation="1" Style="background:#ffffff;color:#004481;">
         <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" />
         <MudText Typo="Typo.h6" Class="ml-2" Style="font-weight:800;">@BrandName</MudText>
         <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Class="ml-2" OnClick="@(_ => ToggleDrawer())" />
         <MudSpacer />
-        <MudAutocomplete T="MenuItemDto"
-                         Value="_searchItem"
-                         ValueChanged="OnSearchSelected"
-                         SearchFunc="SearchMenus"
-                         ToStringFunc="@(m => m?.MenuName ?? string.Empty)"
-                         Placeholder="Search data..."
-                         Variant="Variant.Outlined"
-                         Margin="Margin.Dense"
-                         Adornment="Adornment.Start"
-                         AdornmentIcon="@Icons.Material.Filled.Search"
-                         Style="max-width: 520px; width: 100%; background:#f5f7fb; border-radius:8px;" />
+        <div class="search-wrapper" @onclick:stopPropagation="true">
+            <div class="search-box">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Small" Color="Color.Secondary" />
+                <MudTextField T="string"
+                              @bind-Value="_searchTerm"
+                              @bind-Value:after="OnSearchChanged"
+                              Placeholder="Search data..."
+                              Variant="Variant.Outlined"
+                              Margin="Margin.Dense"
+                              Immediate="true"
+                              Style="border:none; background:transparent; padding:0; flex:1;"
+                              Class="search-input"
+                              @onfocus="OpenSearch" />
+            </div>
+
+            <MudPopover Open="@(_searchOpen && !string.IsNullOrWhiteSpace(_searchTerm))"
+                        AnchorOrigin="Origin.BottomLeft"
+                        TransformOrigin="Origin.TopLeft"
+                        RelativeWidth="DropdownWidth.Relative"
+                        Class="search-popover">
+                <MudPaper Elevation="4" Class="search-results">
+                    @if (_filteredResults.Count > 0)
+                    {
+                        @foreach (var item in _filteredResults)
+                        {
+                            <button type="button" class="search-result" @onclick="() => OpenSearchResult(item)">
+                                <div class="search-result-title">@item.MenuName</div>
+                                <div class="search-result-subtitle">@GetSearchDescription(item)</div>
+                            </button>
+                        }
+                    }
+                    else
+                    {
+                        <div class="search-empty">No results found.</div>
+                    }
+                </MudPaper>
+            </MudPopover>
+        </div>
         <MudSpacer />
         <div class="notification-wrapper">
             <MudBadge Color="Color.Secondary"
@@ -116,13 +143,13 @@
         </MudMenu>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Width="300px" Elevation="1" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
+    <MudDrawer @bind-Open="_drawerOpen" Width="240px" Elevation="1" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
         <MudNavMenu Class="pa-3">
             <div class="sidebar-brand">
                 <div class="sidebar-brand-icon">
                     <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
                 </div>
-                <div>
+                <div class="sidebar-brand-copy">
                     <div class="sidebar-brand-title">@BrandName</div>
                     <div class="sidebar-brand-subtitle">Enterprise Portal</div>
                 </div>
@@ -197,7 +224,9 @@
     private int _unreadCount = 0;
     private int _selectedTabIndex;
     private string? _userName;
-    private MenuItemDto? _searchItem;
+    private string _searchTerm = string.Empty;
+    private bool _searchOpen;
+    private List<MenuItemDto> _filteredResults = new();
     private List<MenuItemDto> _menuItems = new();
     private List<NotificationDto> _notifications = new();
     private HubConnection? _hub;
@@ -445,31 +474,36 @@
         Navigation.NavigateTo("/", true);
     }
 
-    private Task<IEnumerable<MenuItemDto>> SearchMenus(string value, CancellationToken cancellationToken)
+    private void OpenSearch()
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return Task.FromResult(Enumerable.Empty<MenuItemDto>());
-        }
-
-        var results = Flatten(_menuItems)
-            .Where(m => !string.IsNullOrWhiteSpace(m.ComponentType)
-                        && m.MenuName.Contains(value, StringComparison.OrdinalIgnoreCase))
-            .Take(10);
-
-        return Task.FromResult(results);
+        _searchOpen = true;
+        OnSearchChanged();
     }
 
-    private void OnSearchSelected(MenuItemDto? item)
-    {
-        if (item == null)
-        {
-            return;
-        }
+    private void CloseSearch() => _searchOpen = false;
 
+    private void OnSearchChanged()
+    {
+        _searchOpen = true;
+        _filteredResults = string.IsNullOrWhiteSpace(_searchTerm)
+            ? new List<MenuItemDto>()
+            : Flatten(_menuItems)
+                .Where(m => !string.IsNullOrWhiteSpace(m.ComponentType)
+                            && m.MenuName.Contains(_searchTerm, StringComparison.OrdinalIgnoreCase))
+                .Take(10)
+                .ToList();
+    }
+
+    private void OpenSearchResult(MenuItemDto item)
+    {
         OpenMenu(item);
-        _searchItem = null;
+        _searchTerm = string.Empty;
+        _filteredResults.Clear();
+        _searchOpen = false;
     }
+
+    private static string GetSearchDescription(MenuItemDto item)
+        => string.IsNullOrWhiteSpace(item.MenuUrl) ? "Open menu" : item.MenuUrl;
 
     private static IEnumerable<MenuItemDto> Flatten(IEnumerable<MenuItemDto> items)
     {
