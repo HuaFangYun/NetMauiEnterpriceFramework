@@ -1,0 +1,11 @@
+node_modules/
+*.tgz
+
+templates/**/bin/
+templates/**/obj/
+templates/**/AppPackages/
+templates/**/TestResults/
+templates/**/.vs/
+templates/**/.idea/
+templates/**/*.user
+templates/**/*.suo
