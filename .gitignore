@@ -37,6 +37,7 @@ AGENTS.md
 *.tgz
 *.pdf
 *.xlsx
+bugreport-*.zip
 qa*.png
 maui-*.png
 uat-*.png

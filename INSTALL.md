@@ -177,6 +177,34 @@ dotnet run --project <ProjectName>.App -f net10.0-windows10.0.19041.0
 
 Login awal memakai `adminUser` dan `adminPassword` dari config. Segera ganti password setelah login.
 
+### Build APK Android
+
+APK Debug standalone wajib memakai `EmbedAssembliesIntoApk=true`. Tanpa properti ini, APK memakai Fast Deployment dan akan crash saat dibuka dengan pesan:
+
+```text
+No assemblies found in .../.__override__/arm64-v8a
+```
+
+Perintah build:
+
+```powershell
+dotnet clean <ProjectName>.App.csproj -f net10.0-android -v:minimal
+dotnet publish <ProjectName>.App.csproj `
+  -f net10.0-android `
+  -c Debug `
+  -p:AndroidPackageFormats=apk `
+  -p:EmbedAssembliesIntoApk=true `
+  -p:AndroidEnableProfiledAot=false
+```
+
+APK berada di:
+
+```text
+<ProjectName>.App/bin/Debug/net10.0-android/<ApplicationId>-Signed.apk
+```
+
+Untuk perangkat fisik, isi `ApiBaseUrl` pada `Resources/Raw/appsettings.json` dengan IP LAN komputer, jalankan API pada `0.0.0.0`, dan izinkan port API di Windows Firewall. Build Debug memakai bypass sertifikat development; untuk distribusi produksi gunakan build Release dengan keystore resmi.
+
 ## 6. Docker
 
 Jika dibuat dengan `--docker`:

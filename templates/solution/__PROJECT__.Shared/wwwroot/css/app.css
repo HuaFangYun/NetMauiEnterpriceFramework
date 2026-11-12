@@ -177,6 +177,151 @@ html, body {
     font-size: 14px;
 }
 
+.maui-auth-shell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: calc(24px + env(safe-area-inset-top)) 18px calc(24px + env(safe-area-inset-bottom));
+    background: var(--mud-palette-background, #e7eeff);
+}
+
+.maui-auth-card {
+    display: flex;
+    flex-direction: column;
+    width: min(100%, 420px);
+    padding: 28px 22px 24px;
+    border: 2px solid var(--neo-ink);
+    border-radius: 6px;
+    background: var(--mud-palette-surface, #ffffff);
+    box-shadow: 6px 6px 0 var(--neo-ink);
+}
+
+.maui-auth-form-area {
+    display: flex;
+    flex-direction: column;
+    margin-top: auto;
+}
+
+.maui-auth-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 18px;
+    border: 2px solid var(--neo-ink);
+    border-radius: 4px;
+    background: var(--mud-palette-primary, #004481);
+    color: #ffffff;
+    box-shadow: 3px 3px 0 var(--neo-ink);
+}
+
+.maui-auth-logo .mud-icon-root {
+    font-size: 32px;
+}
+
+.maui-auth-heading {
+    margin-bottom: 24px;
+    text-align: center;
+}
+
+.maui-auth-heading h2 {
+    margin: 0 0 8px;
+    color: var(--mud-palette-text-primary, #111c2d);
+    font-size: 28px;
+    font-weight: 800;
+}
+
+.maui-auth-heading p {
+    margin: 0;
+    color: var(--mud-palette-text-secondary, #5b6472);
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.maui-auth-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.maui-auth-options {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+    gap: 12px;
+}
+
+.maui-auth-options .mud-checkbox {
+    flex: 0 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+}
+
+.maui-auth-options .mud-checkbox .mud-typography {
+    font-size: 13px;
+}
+
+.maui-auth-options .login-text-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    flex: 0 0 auto;
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.maui-auth-shell .mud-checkbox .mud-icon-root {
+    border: 2px solid var(--neo-ink);
+    border-radius: 2px;
+}
+
+.maui-auth-submit {
+    margin-top: 24px;
+}
+
+.maui-auth-back {
+    display: block;
+    margin: 18px auto 0;
+}
+
+@media (max-width: 600px) {
+    .maui-auth-shell {
+        align-items: stretch;
+        padding: 0;
+        background: var(--mud-palette-surface, #ffffff);
+    }
+
+    .maui-auth-card {
+        width: 100%;
+        max-width: none;
+        min-height: 100dvh;
+        padding: calc(28px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+}
+
+@media (max-width: 420px) {
+    .maui-auth-card {
+        padding: calc(24px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom));
+    }
+
+    .maui-auth-heading h2 {
+        font-size: 25px;
+    }
+
+    .maui-auth-options {
+        align-items: center;
+        gap: 8px;
+    }
+}
+
 .sidebar-brand {
     display: flex;
     flex-direction: column;

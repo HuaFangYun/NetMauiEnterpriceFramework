@@ -13,6 +13,212 @@
 
 <MudThemeProvider Theme="LoginTheme" />
 
+@if (IsMauiApp)
+{
+    <div class="maui-auth-shell neo-brutalism">
+        <div class="maui-auth-card">
+            <div class="maui-auth-logo">
+                <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+            </div>
+
+            <div class="maui-auth-heading">
+                <h2>@MauiHeaderTitle</h2>
+                <p>@MauiHeaderSubtitle</p>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(_errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4">@_errorMessage</MudAlert>
+            }
+            @if (!string.IsNullOrWhiteSpace(_successMessage))
+            {
+                <MudAlert Severity="Severity.Success" Class="mb-4">@_successMessage</MudAlert>
+            }
+
+            <div class="maui-auth-form-area">
+            @if (_requiresPasswordChange)
+            {
+                <EditForm Model="@_firstLoginModel" OnValidSubmit="@OnFirstLoginPasswordChangeAsync">
+                    <DataAnnotationsValidator />
+                    <div class="maui-auth-fields">
+                        <MudTextField @bind-Value="_firstLoginModel.CurrentPassword"
+                                      Label="Current Password"
+                                      Placeholder="Enter your current password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudTextField @bind-Value="_firstLoginModel.NewPassword"
+                                      Label="New Password"
+                                      Placeholder="Enter your new password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudTextField @bind-Value="_firstLoginModel.ConfirmNewPassword"
+                                      Label="Confirm New Password"
+                                      Placeholder="Repeat your new password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Minimum 8 characters, with uppercase, lowercase, number, and special character.
+                        </MudText>
+                    </div>
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Class="maui-auth-submit"
+                               Disabled="@_isLoading">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Reset Password</span>
+                        }
+                    </MudButton>
+                </EditForm>
+            }
+            else if (_mode == LoginMode.Forgot)
+            {
+                <EditForm Model="@_forgotModel" OnValidSubmit="@OnForgotPasswordAsync">
+                    <DataAnnotationsValidator />
+                    <div class="maui-auth-fields">
+                        <MudTextField @bind-Value="_forgotModel.UserIdOrEmail"
+                                      Label="Username or Email"
+                                      Placeholder="Enter your username or email"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Person" />
+                    </div>
+                    <button type="button" class="login-text-link maui-auth-back" @onclick="ShowSignIn">Back to Sign In</button>
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Class="maui-auth-submit"
+                               Disabled="_forgotLoading">
+                        @if (_forgotLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Send Reset</span>
+                        }
+                    </MudButton>
+                </EditForm>
+            }
+            else if (_mode == LoginMode.Reset)
+            {
+                <div class="maui-auth-fields">
+                    <button type="button" class="login-text-link maui-auth-back" @onclick="ShowSignIn">Back to Sign In</button>
+                    @if (_resetTokenInvalid)
+                    {
+                        <MudAlert Severity="Severity.Error">Reset token is invalid or has expired.</MudAlert>
+                    }
+                    else
+                    {
+                        <EditForm Model="@_resetModel" OnValidSubmit="@OnResetPasswordAsync">
+                            <DataAnnotationsValidator />
+                            <MudTextField @bind-Value="_resetModel.NewPassword"
+                                          Label="New Password"
+                                          Placeholder="Enter your new password"
+                                          Variant="Variant.Outlined"
+                                          FullWidth="true"
+                                          InputType="InputType.Password"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+                            <MudTextField @bind-Value="_resetModel.ConfirmNewPassword"
+                                          Label="Confirm New Password"
+                                          Placeholder="Repeat your new password"
+                                          Variant="Variant.Outlined"
+                                          FullWidth="true"
+                                          InputType="InputType.Password"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Minimum 8 characters, with uppercase, lowercase, number, and special character.
+                            </MudText>
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       FullWidth="true"
+                                       Size="Size.Large"
+                                       Class="maui-auth-submit"
+                                       Disabled="_resetLoading">
+                                @if (_resetLoading)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                                }
+                                else
+                                {
+                                    <span>Reset Password</span>
+                                }
+                            </MudButton>
+                        </EditForm>
+                    }
+                </div>
+            }
+            else
+            {
+                <EditForm Model="@_loginModel" OnValidSubmit="@OnLoginAsync">
+                    <DataAnnotationsValidator />
+                    <div class="maui-auth-fields">
+                        <MudTextField @bind-Value="_loginModel.UserId"
+                                      Label="Username"
+                                      Placeholder="Enter your username"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Badge" />
+                        <MudTextField @bind-Value="_loginModel.Password"
+                                      Label="Password"
+                                      Placeholder="Enter your password"
+                                      Variant="Variant.Outlined"
+                                      FullWidth="true"
+                                      InputType="InputType.Password"
+                                      Adornment="Adornment.Start"
+                                      AdornmentIcon="@Icons.Material.Filled.Lock" />
+                        <div class="maui-auth-options">
+                            <MudCheckBox T="bool" @bind-Value="_loginModel.RememberMe" Color="Color.Primary">Remember this device</MudCheckBox>
+                            <button type="button" class="login-text-link" @onclick="ShowForgot">Forgot Password?</button>
+                        </div>
+                    </div>
+                    <MudButton ButtonType="ButtonType.Submit"
+                               Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               FullWidth="true"
+                               Size="Size.Large"
+                               Class="maui-auth-submit"
+                               Disabled="@_isLoading">
+                        @if (_isLoading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Color="Color.Info" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Login</span>
+                        }
+                    </MudButton>
+                </EditForm>
+            }
+            </div>
+        </div>
+    </div>
+}
+else
+{
 <MudGrid Justify="Justify.Center" Class="@LoginPageClass" Style="min-height:100vh; background:#e7eeff;">
     <MudItem xs="12" md="6" Class="login-brand-item">
         <MudPaper Elevation="0" Class="login-brand-panel">
@@ -240,12 +446,18 @@
         </MudPaper>
     </MudItem>
 </MudGrid>
+}
 
 @code {
     private const string BrandName = "__PROJECT__";
     private const string StyleStorageKey = "enterprise-ui-style";
     private bool _neoBrutalism = true;
+    private static bool IsMauiApp => !OperatingSystem.IsBrowser();
     private string LoginPageClass => $"login-page {(_neoBrutalism ? "neo-brutalism" : "classic-login")}";
+    private string MauiHeaderTitle => _requiresPasswordChange ? "Reset Password" : HeaderTitle;
+    private string MauiHeaderSubtitle => _requiresPasswordChange
+        ? "Set a new password for your account."
+        : HeaderSubtitle;
 
     [SupplyParameterFromQuery(Name = "token")]
     public string? Token { get; set; }
