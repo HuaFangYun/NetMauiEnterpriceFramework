@@ -10,7 +10,6 @@ namespace __PROJECT__.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
 [Authorize(Roles = "00")]
 public class GroupController : ControllerBase
 {
