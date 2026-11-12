@@ -59,7 +59,7 @@
             </MudTabPanel>
 
             <MudTabPanel Text="Child">
-                <div class="d-flex align-center gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3 mb-3">
                     <MudSwitch T="bool" @bind-Value="_hasChild" Color="Color.Primary" Label="Enable child" />
                 </div>
                 @if (_hasChild)
@@ -106,7 +106,7 @@
             </MudTabPanel>
 
             <MudTabPanel Text="Import Excel">
-                <div class="d-flex align-center gap-3 mb-3">
+                <div class="d-flex align-items-center gap-3 mb-3">
                     <MudSwitch T="bool" @bind-Value="_hasImport" Color="Color.Primary" Label="Enable import process" />
                 </div>
                 @if (_hasImport)

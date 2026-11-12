@@ -1,28 +1,29 @@
-using Microsoft.EntityFrameworkCore;
-
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.User;
 using __PROJECT__.Application.Interfaces;
+using __PROJECT__.Application.Interfaces.Queries;
 using __PROJECT__.Domain.Entities;
 using __PROJECT__.Domain.Enums;
-using __PROJECT__.Infrastructure.Data;
 
 namespace __PROJECT__.Infrastructure.Services;
 
 public class UserManagementService : IUserManagementService
 {
-    private readonly __PROJECT__DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IUserQueryService _queryService;
     private readonly IPasswordHasherService _passwordHasher;
     private readonly ICurrentUserService _currentUser;
     private readonly IErrorLogService _errorLog;
 
     public UserManagementService(
-        __PROJECT__DbContext context,
+        IUnitOfWork unitOfWork,
+        IUserQueryService queryService,
         IPasswordHasherService passwordHasher,
         ICurrentUserService currentUser,
         IErrorLogService errorLog)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
+        _queryService = queryService;
         _passwordHasher = passwordHasher;
         _currentUser = currentUser;
         _errorLog = errorLog;
@@ -31,120 +32,15 @@ public class UserManagementService : IUserManagementService
     private Task LogErrorAsync(Exception exception)
         => _errorLog.LogAsync("UserManagement", "ERROR", exception);
 
-    public async Task<GeneralListResponseDto<UserListItemDto>> GetListAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
+    public Task<GeneralListResponseDto<UserListItemDto>> GetListAsync(DataTableRequestDto request)
+        => _queryService.GetListAsync(request);
 
-        var query = from u in _context.um_user_app
-                    join ug in _context.um_user_group on u.user_id equals ug.user_id into ugJoin
-                    from ug in ugJoin.DefaultIfEmpty()
-                    join g in _context.um_group_app on ug.group_id equals g.group_id into gJoin
-                    from g in gJoin.DefaultIfEmpty()
-                    join f in _context.um_user_app_flag on u.user_id equals f.user_id into fJoin
-                    from f in fJoin.DefaultIfEmpty()
-                    join e in _context.enum_gender on u.gender_id equals e.gender_code into eJoin
-                    from e in eJoin.DefaultIfEmpty()
-                    where u.isDeleted != true
-                    select new UserListItemDto
-                    {
-                        UserId = u.user_id,
-                        FullName = u.full_name,
-                        Email = u.email,
-                        PhoneNumber = u.phone_number,
-                        GenderId = u.gender_id,
-                        GenderName = e != null ? e.gender_name : null,
-                        GroupId = ug != null ? ug.group_id : null,
-                        GroupName = g != null ? g.group_name : null,
-                        IsActive = u.isActive == true,
-                        IsLocked = f != null && f.is_locked == true,
-                        LastLoginDate = f != null ? f.last_login_date : null,
-                    };
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            query = query.Where(x =>
-                x.UserId.Contains(search)
-                || (x.FullName != null && x.FullName.Contains(search))
-                || (x.Email != null && x.Email.Contains(search)));
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
-            "email" => desc ? query.OrderByDescending(x => x.Email) : query.OrderBy(x => x.Email),
-            "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
-            "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),
-            _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
-        };
-
-        var totalCount = await query.CountAsync();
-        var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
-        return new GeneralListResponseDto<UserListItemDto>
-        {
-            Data = data,
-            TotalCount = totalCount,
-        };
-    }
-
-    public async Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagListAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
-
-        var query = from u in _context.um_user_app
-                    join f in _context.um_user_app_flag on u.user_id equals f.user_id into flagJoin
-                    from f in flagJoin.DefaultIfEmpty()
-                    where u.isDeleted != true
-                    select new UserFlagDto
-                    {
-                        UserId = u.user_id,
-                        FullName = u.full_name,
-                        IsLogin = f != null ? f.is_login : null,
-                        IsFirstLogin = f != null ? f.is_first_login : null,
-                        IsLocked = f != null ? f.is_locked : null,
-                        FailedPasswordAttempt = f != null ? f.failed_password_attempt_count : null,
-                        IpAddress = f != null ? f.ip_address : null,
-                        LastLoginDate = f != null ? f.last_login_date : null,
-                        Comment = f != null ? f.comment : null,
-                    };
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            query = query.Where(x =>
-                x.UserId.Contains(search)
-                || (x.FullName != null && x.FullName.Contains(search))
-                || (x.IpAddress != null && x.IpAddress.Contains(search)));
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
-            "islogin" => desc ? query.OrderByDescending(x => x.IsLogin) : query.OrderBy(x => x.IsLogin),
-            "isfirstlogin" => desc ? query.OrderByDescending(x => x.IsFirstLogin) : query.OrderBy(x => x.IsFirstLogin),
-            "islocked" => desc ? query.OrderByDescending(x => x.IsLocked) : query.OrderBy(x => x.IsLocked),
-            "lastlogindate" => desc ? query.OrderByDescending(x => x.LastLoginDate) : query.OrderBy(x => x.LastLoginDate),
-            _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
-        };
-
-        var totalCount = await query.CountAsync();
-        var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-
-        return new GeneralListResponseDto<UserFlagDto>
-        {
-            Data = data,
-            TotalCount = totalCount,
-        };
-    }
+    public Task<GeneralListResponseDto<UserFlagDto>> GetUserFlagListAsync(DataTableRequestDto request)
+        => _queryService.GetUserFlagListAsync(request);
 
     public async Task<UserEditDto?> GetByIdAsync(string userId)
     {
-        var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == userId && e.isDeleted != true);
+        var user = await _unitOfWork.UmUserApp.GetActiveByIdAsync(userId);
         if (user == null)
         {
             return null;
@@ -171,12 +67,12 @@ public class UserManagementService : IUserManagementService
                 return Fail("User ID and password are required.");
             }
 
-            if (await _context.um_user_app.AnyAsync(e => e.user_id == dto.UserId))
+            if (await _unitOfWork.UmUserApp.ExistsAnyAsync(dto.UserId))
             {
                 return Fail("User ID already exists.");
             }
 
-            if (await _context.temp_user_app_pending.AnyAsync(e => e.user_id == dto.UserId))
+            if (await _unitOfWork.TempUserAppPending.ExistsAsync(dto.UserId))
             {
                 return Fail("User already has a pending request.");
             }
@@ -184,7 +80,7 @@ public class UserManagementService : IUserManagementService
             var now = DateTime.Now;
             var actor = _currentUser.UserId ?? "system";
 
-            await _context.temp_user_app_pending.AddAsync(new temp_user_app_pending
+            await _unitOfWork.TempUserAppPending.AddAsync(new temp_user_app_pending
             {
                 user_id = dto.UserId,
                 full_name = dto.FullName,
@@ -199,7 +95,7 @@ public class UserManagementService : IUserManagementService
                 created_date = now,
             });
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             return Success("User creation request sent for approval.");
         }
         catch (Exception ex)
@@ -213,13 +109,13 @@ public class UserManagementService : IUserManagementService
     {
         try
         {
-            var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == userId && e.isDeleted != true);
+            var user = await _unitOfWork.UmUserApp.GetActiveByIdAsync(userId);
             if (user == null)
             {
                 return Fail("User not found.");
             }
 
-            if (await _context.temp_user_app_pending.AnyAsync(e => e.user_id == userId))
+            if (await _unitOfWork.TempUserAppPending.ExistsAsync(userId))
             {
                 return Fail("User already has a pending request.");
             }
@@ -227,7 +123,7 @@ public class UserManagementService : IUserManagementService
             var now = DateTime.Now;
             var actor = _currentUser.UserId ?? "system";
 
-            await _context.temp_user_app_pending.AddAsync(new temp_user_app_pending
+            await _unitOfWork.TempUserAppPending.AddAsync(new temp_user_app_pending
             {
                 user_id = userId,
                 full_name = dto.FullName,
@@ -242,7 +138,7 @@ public class UserManagementService : IUserManagementService
                 created_date = now,
             });
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             return Success("User update request sent for approval.");
         }
         catch (Exception ex)
@@ -256,22 +152,22 @@ public class UserManagementService : IUserManagementService
     {
         try
         {
-            var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == userId && e.isDeleted != true);
+            var user = await _unitOfWork.UmUserApp.GetActiveByIdAsync(userId);
             if (user == null)
             {
                 return Fail("User not found.");
             }
 
-            if (await _context.temp_user_app_pending.AnyAsync(e => e.user_id == userId))
+            if (await _unitOfWork.TempUserAppPending.ExistsAsync(userId))
             {
                 return Fail("User already has a pending request.");
             }
 
-            var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == userId);
+            var role = await _unitOfWork.UmUserGroup.GetByIdAsync(userId);
             var now = DateTime.Now;
             var actor = _currentUser.UserId ?? "system";
 
-            await _context.temp_user_app_pending.AddAsync(new temp_user_app_pending
+            await _unitOfWork.TempUserAppPending.AddAsync(new temp_user_app_pending
             {
                 user_id = userId,
                 full_name = user.full_name,
@@ -286,7 +182,7 @@ public class UserManagementService : IUserManagementService
                 created_date = now,
             });
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             return Success("User deletion request sent for approval.");
         }
         catch (Exception ex)
@@ -298,7 +194,7 @@ public class UserManagementService : IUserManagementService
 
     public async Task<BaseGeneralResponse> UnlockAsync(string userId)
     {
-        var flag = await _context.um_user_app_flag.FirstOrDefaultAsync(e => e.user_id == userId);
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(userId);
         if (flag == null)
         {
             return Fail("User flag not found.");
@@ -308,7 +204,7 @@ public class UserManagementService : IUserManagementService
         flag.failed_password_attempt_count = 0;
         flag.failed_password_attempt_date = null;
         flag.last_locked_out_date = null;
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         return Success("User unlocked successfully.");
     }
 
@@ -319,7 +215,7 @@ public class UserManagementService : IUserManagementService
             return Fail("Password must be at least 8 characters.");
         }
 
-        var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == userId && e.isDeleted != true);
+        var user = await _unitOfWork.UmUserApp.GetActiveByIdAsync(userId);
         if (user == null)
         {
             return Fail("User not found.");
@@ -328,7 +224,7 @@ public class UserManagementService : IUserManagementService
         user.password = _passwordHasher.HashPassword(newPassword);
         user.last_password_change_date = DateTime.Now;
 
-        var flag = await _context.um_user_app_flag.FirstOrDefaultAsync(e => e.user_id == userId);
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(userId);
         if (flag != null)
         {
             flag.is_first_login = true;
@@ -336,7 +232,7 @@ public class UserManagementService : IUserManagementService
             flag.failed_password_attempt_count = 0;
         }
 
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         return Success("Password reset successfully.");
     }
 
@@ -353,51 +249,4 @@ public class UserManagementService : IUserManagementService
         Code = Const.ERROR_CODE,
         Message = message,
     };
-}
-
-public class DropDownService : IDropDownService
-{
-    private readonly __PROJECT__DbContext _context;
-
-    public DropDownService(__PROJECT__DbContext context) => _context = context;
-
-    public Task<List<DropdownItemDto>> GetGroupsAsync()
-        => _context.um_group_app
-            .Where(e => e.isActive != false && e.isDeleted != true)
-            .OrderBy(e => e.group_name)
-            .Select(e => new DropdownItemDto { Value = e.group_id, Text = e.group_name ?? e.group_id })
-            .ToListAsync();
-
-    public Task<List<DropdownItemDto>> GetGendersAsync()
-        => _context.enum_gender
-            .OrderBy(e => e.gender_code)
-            .Select(e => new DropdownItemDto { Value = e.gender_code, Text = e.gender_name ?? e.gender_code })
-            .ToListAsync();
-
-    public Task<List<DropdownItemDto>> GetUsersAsync()
-        => _context.um_user_app
-            .Where(e => e.isActive != false && e.isDeleted != true)
-            .OrderBy(e => e.user_id)
-            .Select(e => new DropdownItemDto { Value = e.user_id, Text = e.full_name ?? e.user_id })
-            .ToListAsync();
-
-    public Task<List<DropdownItemDto>> GetMenuIconsAsync()
-        => _context.enum_menu_icon
-            .OrderBy(e => e.menu_icon_code)
-            .Select(e => new DropdownItemDto
-            {
-                Value = e.menu_icon_code,
-                Text = e.menu_icon_name_alternate ?? e.menu_icon_name ?? e.menu_icon_code,
-            })
-            .ToListAsync();
-
-    public Task<List<DropdownItemDto>> GetMenuParentLevelsAsync()
-        => _context.enum_menu_parent_level
-            .OrderBy(e => e.parent_level_code)
-            .Select(e => new DropdownItemDto
-            {
-                Value = e.parent_level_code,
-                Text = e.parent_level_name ?? e.parent_level_code,
-            })
-            .ToListAsync();
 }

@@ -74,6 +74,34 @@ public class AuthService
         return wrapper?.Data;
     }
 
+    public async Task RequestPasswordResetAsync(string userIdOrEmail)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/auth/forgot-password", new ForgotPasswordRequestDto
+        {
+            UserIdOrEmail = userIdOrEmail,
+        });
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(await ReadErrorAsync(response));
+        }
+    }
+
+    public async Task<bool> ValidatePasswordResetTokenAsync(string token)
+    {
+        var wrapper = await _httpClient.GetFromJsonAsync<ApiResponse<bool>>(
+            $"api/auth/reset-password/validate?token={Uri.EscapeDataString(token)}");
+        return wrapper?.Data == true;
+    }
+
+    public async Task ResetPasswordAsync(ResetPasswordRequestDto request)
+    {
+        var response = await _httpClient.PostAsJsonAsync("api/auth/reset-password", request);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception(await ReadErrorAsync(response));
+        }
+    }
+
     public async Task ChangeFirstLoginPasswordAsync(FirstLoginPasswordDto request)
     {
         using var message = new HttpRequestMessage(HttpMethod.Post, "api/auth/first-login/change-password")

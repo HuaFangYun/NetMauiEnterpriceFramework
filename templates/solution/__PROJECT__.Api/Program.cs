@@ -16,11 +16,13 @@ using Serilog;
 using __PROJECT__.Api.Hubs;
 using __PROJECT__.Api.Services;
 using __PROJECT__.Application.Interfaces;
+using __PROJECT__.Application.Interfaces.Queries;
 using __PROJECT__.Application.Interfaces.Repositories;
 using __PROJECT__.Application.Services;
 using __PROJECT__.Infrastructure;
 using __PROJECT__.Infrastructure.Data;
 using __PROJECT__.Infrastructure.Identity;
+using __PROJECT__.Infrastructure.Queries;
 using __PROJECT__.Infrastructure.Repositories.Auth;
 using __PROJECT__.Infrastructure.Services;
 
@@ -68,6 +70,14 @@ builder.Services.AddScoped<IMenuManagementService, MenuManagementService>();
 builder.Services.AddScoped<IUserManagementService, UserManagementService>();
 builder.Services.AddScoped<IGroupManagementService, GroupManagementService>();
 builder.Services.AddScoped<IRoleManagementService, RoleManagementService>();
+builder.Services.AddScoped<IGroupQueryService, GroupQueryService>();
+builder.Services.AddScoped<IRoleQueryService, RoleQueryService>();
+builder.Services.AddScoped<IUserQueryService, UserQueryService>();
+builder.Services.AddScoped<IMenuQueryService, MenuQueryService>();
+builder.Services.AddScoped<IScreenMenuQueryService, ScreenMenuQueryService>();
+builder.Services.AddScoped<IApprovalQueryService, ApprovalQueryService>();
+builder.Services.AddScoped<INotificationQueryService, NotificationQueryService>();
+builder.Services.AddScoped<IEmailProviderQueryService, EmailProviderQueryService>();
 builder.Services.AddScoped<IParameterStagingService, ParameterStagingService>();
 builder.Services.AddScoped<IApprovalService, ApprovalService>();
 builder.Services.AddScoped<IParameterEngineService, ParameterEngineService>();
@@ -75,12 +85,15 @@ builder.Services.AddScoped<IDynamicEngineService, DynamicEngineService>();
 builder.Services.AddScoped<IScreenMenuEditorService, ScreenMenuEditorService>();
 builder.Services.AddScoped<IUserSessionNotifier, UserSessionNotifier>();
 builder.Services.AddScoped<IErrorLogService, ErrorLogService>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+builder.Services.AddScoped<IEmailProviderService, EmailProviderService>();
+builder.Services.AddScoped<EmailOutboxProcessor>();
 builder.Services.AddScoped<INotificationPusher, SignalRNotificationPusher>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<ExcelExportJob>();
 builder.Services.AddScoped<PdfExportJob>();
 builder.Services.AddScoped<ManagementExportJob>();
-builder.Services.AddScoped<IDropDownService, DropDownService>();
+builder.Services.AddScoped<IDropDownService, DropDownQueryService>();
 builder.Services.AddScoped<IJWTService, JwtTokenService>();
 builder.Services.AddScoped<IPasswordHasherService, PasswordHasherService>();
 
@@ -222,6 +235,11 @@ if (app.Environment.IsDevelopment())
 app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 app.MapHub<UserHub>("/userHub");
 app.MapControllers();
+var recurringJobs = app.Services.GetRequiredService<IRecurringJobManager>();
+recurringJobs.AddOrUpdate<EmailOutboxProcessor>(
+    "email-outbox",
+    job => job.ProcessPendingAsync(),
+    "*/1 * * * *");
 app.Run();
 
 public partial class Program

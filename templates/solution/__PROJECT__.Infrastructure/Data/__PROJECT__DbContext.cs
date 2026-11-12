@@ -63,6 +63,10 @@ public class __PROJECT__DbContext : DbContext
     public DbSet<rf_message> rf_message => Set<rf_message>();
 
     public DbSet<proc_seq> proc_seq => Set<proc_seq>();
+    public DbSet<tb_email_provider> tb_email_provider => Set<tb_email_provider>();
+    public DbSet<tb_email_template> tb_email_template => Set<tb_email_template>();
+    public DbSet<tb_email_outbox> tb_email_outbox => Set<tb_email_outbox>();
+    public DbSet<tb_password_reset_token> tb_password_reset_token => Set<tb_password_reset_token>();
 
     public override int SaveChanges()
     {
@@ -140,6 +144,11 @@ public class __PROJECT__DbContext : DbContext
     {
         foreach (var property in entry.Properties)
         {
+            if (IsSensitiveAuditColumn(property.Metadata.Name))
+            {
+                continue;
+            }
+
             details.Add(new tb_audit_trail_detail
             {
                 tb_audit_trail_id = headerId,
@@ -157,6 +166,11 @@ public class __PROJECT__DbContext : DbContext
     {
         foreach (var property in entry.Properties.Where(p => p.IsModified))
         {
+            if (IsSensitiveAuditColumn(property.Metadata.Name))
+            {
+                continue;
+            }
+
             if (Equals(property.OriginalValue, property.CurrentValue))
             {
                 continue;
@@ -171,6 +185,16 @@ public class __PROJECT__DbContext : DbContext
             });
         }
     }
+
+    private static bool IsSensitiveAuditColumn(string columnName)
+        => columnName.Contains("password", StringComparison.OrdinalIgnoreCase)
+           || columnName.Contains("token", StringComparison.OrdinalIgnoreCase)
+           || columnName.Contains("refresh", StringComparison.OrdinalIgnoreCase)
+           || columnName.Contains("secret", StringComparison.OrdinalIgnoreCase)
+           || columnName.Contains("config", StringComparison.OrdinalIgnoreCase)
+           || columnName.Equals("body_html", StringComparison.OrdinalIgnoreCase)
+           || columnName.Equals("body_text", StringComparison.OrdinalIgnoreCase)
+           || columnName.Equals("long_text", StringComparison.OrdinalIgnoreCase);
 
     private async Task WriteAuditRecordsAsync(
         List<AuditRecord> records,
@@ -208,6 +232,7 @@ public class __PROJECT__DbContext : DbContext
         ConfigureScreensAndReports(modelBuilder);
         ConfigureNotifications(modelBuilder);
         ConfigureReferences(modelBuilder);
+        ConfigureEmailAndReset(modelBuilder);
 
         modelBuilder.Entity<proc_seq>().HasKey(e => e.id);
     }
@@ -322,6 +347,18 @@ public class __PROJECT__DbContext : DbContext
             .WithMany()
             .HasForeignKey(e => e.notification_type_id)
             .OnDelete(DeleteBehavior.SetNull);
+    }
+
+    private static void ConfigureEmailAndReset(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<tb_email_provider>().HasKey(e => e.id);
+        modelBuilder.Entity<tb_email_provider>().HasIndex(e => e.priority);
+        modelBuilder.Entity<tb_email_template>().HasKey(e => e.template_key);
+        modelBuilder.Entity<tb_email_outbox>().HasKey(e => e.id);
+        modelBuilder.Entity<tb_email_outbox>().HasIndex(e => new { e.status, e.next_attempt_at });
+        modelBuilder.Entity<tb_password_reset_token>().HasKey(e => e.id);
+        modelBuilder.Entity<tb_password_reset_token>().HasIndex(e => e.token_hash).IsUnique();
+        modelBuilder.Entity<tb_password_reset_token>().HasIndex(e => e.user_id);
     }
 
     private static void ConfigureReferences(ModelBuilder modelBuilder)

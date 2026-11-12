@@ -40,7 +40,7 @@
         </MudPaper>
 
         <MudPaper Elevation="0" Class="mapping-panel mt-4">
-            <div class="d-flex justify-between align-center">
+            <div class="d-flex justify-content-between align-items-center">
                 <MudText Typo="Typo.body2" Class="font-weight-bold">Main Modules</MudText>
                 <MudChip T="string" Size="Size.Small" Color="Color.Primary">@(_allMenus?.Count ?? 0) Total</MudChip>
             </div>
@@ -53,7 +53,7 @@
                     var assigned = CountAssigned(module);
                     var total = CountTotal(module);
                     <div class="mapping-module-row" @onclick="@(() => FilterTree(module.MenuUnique))">
-                        <div class="d-flex align-center gap-2">
+                        <div class="d-flex align-items-center gap-2">
                             <MudIcon Icon="@MenuIconResolver.GetIcon(module.MenuIcon)" Size="Size.Small" Color="Color.Primary" />
                             <MudText Typo="Typo.body2">@module.MenuName</MudText>
                         </div>

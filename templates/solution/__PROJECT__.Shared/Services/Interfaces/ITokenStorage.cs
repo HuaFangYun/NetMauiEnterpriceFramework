@@ -6,6 +6,7 @@ public interface ITokenStorage
     Task SetAccessTokenAsync(string token);
     Task<string?> GetRefreshTokenAsync();
     Task SetRefreshTokenAsync(string token);
+    Task SetRememberMeAsync(bool remember);
     Task RemoveTokensAsync();
 }
 

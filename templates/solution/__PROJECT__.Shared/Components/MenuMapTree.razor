@@ -6,7 +6,7 @@
                  Value="@SelectedIds.Contains(Node.Id)"
                  ValueChanged="@((bool value) => OnToggle.InvokeAsync((Node, value)))"
                  Color="Color.Primary">
-        <div class="d-flex align-center gap-2">
+        <div class="d-flex align-items-center gap-2">
             <MudIcon Icon="@MenuIconResolver.GetIcon(Node.MenuIcon)" Size="Size.Small" Color="Color.Primary" />
             <span>@Node.MenuName</span>
         </div>

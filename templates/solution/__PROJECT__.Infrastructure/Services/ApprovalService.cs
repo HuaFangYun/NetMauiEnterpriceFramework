@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using __PROJECT__.Application.DTOs.Approval;
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.Interfaces;
+using __PROJECT__.Application.Interfaces.Queries;
 using __PROJECT__.Domain.Entities;
 using __PROJECT__.Domain.Enums;
 using __PROJECT__.Infrastructure.Data;
@@ -11,20 +12,23 @@ namespace __PROJECT__.Infrastructure.Services;
 
 public class ApprovalService : IApprovalService
 {
-    private readonly __PROJECT__DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IApprovalQueryService _queryService;
     private readonly AuditLogDbContext _audit;
     private readonly ICurrentUserService _currentUser;
     private readonly INotificationService _notificationService;
     private readonly IErrorLogService _errorLog;
 
     public ApprovalService(
-        __PROJECT__DbContext context,
+        IUnitOfWork unitOfWork,
+        IApprovalQueryService queryService,
         AuditLogDbContext audit,
         ICurrentUserService currentUser,
         INotificationService notificationService,
         IErrorLogService errorLog)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
+        _queryService = queryService;
         _audit = audit;
         _currentUser = currentUser;
         _notificationService = notificationService;
@@ -36,58 +40,12 @@ public class ApprovalService : IApprovalService
     private Task LogErrorAsync(Exception exception)
         => _errorLog.LogAsync("Approval", "ERROR", exception);
 
-    public async Task<GeneralListResponseDto<UserApprovalListItemDto>> GetPendingUsersAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
-
-        var query = from pending in _context.temp_user_app_pending
-                    join user in _context.um_user_app on pending.created_by equals user.user_id into userJoin
-                    from user in userJoin.DefaultIfEmpty()
-                    join grp in _context.um_group_app on pending.group_id equals grp.group_id into groupJoin
-                    from grp in groupJoin.DefaultIfEmpty()
-                    select new UserApprovalListItemDto
-                    {
-                        Id = pending.id,
-                        UserId = pending.user_id,
-                        FullName = pending.full_name,
-                        Email = pending.email,
-                        GroupId = pending.group_id,
-                        GroupName = grp != null ? grp.group_name : null,
-                        ApprovalType = pending.approval_type_id ?? string.Empty,
-                        RequesterFullName = user != null ? user.full_name : pending.created_by,
-                        CreatedDate = pending.created_date,
-                    };
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            query = query.Where(x =>
-                x.UserId.Contains(search)
-                || (x.FullName != null && x.FullName.Contains(search))
-                || (x.Email != null && x.Email.Contains(search))
-                || (x.RequesterFullName != null && x.RequesterFullName.Contains(search)));
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
-            "email" => desc ? query.OrderByDescending(x => x.Email) : query.OrderBy(x => x.Email),
-            "createddate" => desc ? query.OrderByDescending(x => x.CreatedDate) : query.OrderBy(x => x.CreatedDate),
-            _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
-        };
-
-        var total = await query.CountAsync();
-        var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-        data.ForEach(x => x.ApprovalType = TypeLabel(x.ApprovalType));
-
-        return new GeneralListResponseDto<UserApprovalListItemDto> { Data = data, TotalCount = total };
-    }
+    public Task<GeneralListResponseDto<UserApprovalListItemDto>> GetPendingUsersAsync(DataTableRequestDto request)
+        => _queryService.GetPendingUsersAsync(request);
 
     public async Task<BaseGeneralResponse> ApproveUserAsync(long id)
     {
-        var pending = await _context.temp_user_app_pending.FirstOrDefaultAsync(e => e.id == id);
+        var pending = await _unitOfWork.TempUserAppPending.GetByIdAsync(id);
         if (pending == null)
         {
             return Fail("Pending request not found.");
@@ -102,10 +60,10 @@ public class ApprovalService : IApprovalService
 
         }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var user = await _context.um_user_app.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
+            var user = await _unitOfWork.UmUserApp.GetByIdAsync(pending.user_id);
             var now = DateTime.Now;
 
             if (pending.approval_type_id == Const.ApprovalType.ADD)
@@ -123,7 +81,7 @@ public class ApprovalService : IApprovalService
                         createdBy = pending.created_by,
                         createdDate = pending.created_date,
                     };
-                    await _context.um_user_app.AddAsync(user);
+                    await _unitOfWork.UmUserApp.AddAsync(user);
                 }
 
                 ApplyUserFields(user, pending);
@@ -179,7 +137,7 @@ public class ApprovalService : IApprovalService
                 user.approvedBy = Actor;
                 user.approvedDate = now;
 
-                var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
+                var role = await _unitOfWork.UmUserGroup.GetByIdAsync(pending.user_id);
                 if (role != null)
                 {
                     role.isActive = false;
@@ -188,7 +146,7 @@ public class ApprovalService : IApprovalService
                     role.deletedDate = now;
                 }
 
-                var flag = await _context.um_user_app_flag.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
+                var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(pending.user_id);
                 if (flag != null)
                 {
                     flag.is_login = false;
@@ -200,8 +158,8 @@ public class ApprovalService : IApprovalService
                 return Fail("Unknown approval type.");
             }
 
-            _context.temp_user_app_pending.Remove(pending);
-            await _context.SaveChangesAsync();
+            _unitOfWork.TempUserAppPending.Remove(pending);
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             await AuditAsync("UserApproval", "APPROVE", $"User {pending.user_id} approved ({TypeLabel(pending.approval_type_id)}).");
             await NotifyAsync(pending.created_by, $"User {pending.user_id} approved.");
@@ -217,73 +175,34 @@ public class ApprovalService : IApprovalService
 
     public async Task<BaseGeneralResponse> RejectUserAsync(long id)
     {
-        var pending = await _context.temp_user_app_pending.FirstOrDefaultAsync(e => e.id == id);
+        var pending = await _unitOfWork.TempUserAppPending.GetByIdAsync(id);
         if (pending == null)
         {
             return Fail("Pending request not found.");
         }
 
-        _context.temp_user_app_pending.Remove(pending);
-        await _context.SaveChangesAsync();
+        _unitOfWork.TempUserAppPending.Remove(pending);
+        await _unitOfWork.SaveChangesAsync();
         await AuditAsync("UserApproval", "REJECT", $"User {pending.user_id} rejected ({TypeLabel(pending.approval_type_id)}).");
         await NotifyAsync(pending.created_by, $"User {pending.user_id} rejected.");
         return Success("User request rejected.");
     }
 
-    public async Task<GeneralListResponseDto<GroupApprovalListItemDto>> GetPendingGroupsAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
-
-        var query = from pending in _context.temp_group_app_pending
-                    join user in _context.um_user_app on pending.created_by equals user.user_id into userJoin
-                    from user in userJoin.DefaultIfEmpty()
-                    select new GroupApprovalListItemDto
-                    {
-                        Id = pending.id,
-                        GroupId = pending.group_id,
-                        GroupName = pending.group_name,
-                        ApprovalType = pending.approval_type_id ?? string.Empty,
-                        RequesterFullName = user != null ? user.full_name : pending.created_by,
-                        CreatedDate = pending.created_date,
-                    };
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            query = query.Where(x =>
-                x.GroupId.Contains(search)
-                || (x.GroupName != null && x.GroupName.Contains(search))
-                || (x.RequesterFullName != null && x.RequesterFullName.Contains(search)));
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
-            "createddate" => desc ? query.OrderByDescending(x => x.CreatedDate) : query.OrderBy(x => x.CreatedDate),
-            _ => desc ? query.OrderByDescending(x => x.GroupId) : query.OrderBy(x => x.GroupId),
-        };
-
-        var total = await query.CountAsync();
-        var data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
-        data.ForEach(x => x.ApprovalType = TypeLabel(x.ApprovalType));
-
-        return new GeneralListResponseDto<GroupApprovalListItemDto> { Data = data, TotalCount = total };
-    }
+    public Task<GeneralListResponseDto<GroupApprovalListItemDto>> GetPendingGroupsAsync(DataTableRequestDto request)
+        => _queryService.GetPendingGroupsAsync(request);
 
     public async Task<BaseGeneralResponse> ApproveGroupAsync(long id)
     {
-        var pending = await _context.temp_group_app_pending.FirstOrDefaultAsync(e => e.id == id);
+        var pending = await _unitOfWork.TempGroupAppPending.GetByIdAsync(id);
         if (pending == null)
         {
             return Fail("Pending request not found.");
         }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var group = await _context.um_group_app.FirstOrDefaultAsync(e => e.group_id == pending.group_id);
+            var group = await _unitOfWork.UmGroupApp.GetByIdAsync(pending.group_id);
             var now = DateTime.Now;
 
             if (pending.approval_type_id == Const.ApprovalType.ADD)
@@ -301,7 +220,7 @@ public class ApprovalService : IApprovalService
                         createdBy = pending.created_by,
                         createdDate = pending.created_date ?? now,
                     };
-                    await _context.um_group_app.AddAsync(group);
+                    await _unitOfWork.UmGroupApp.AddAsync(group);
                 }
 
                 group.group_name = pending.group_name;
@@ -340,7 +259,7 @@ public class ApprovalService : IApprovalService
                     return Fail("Administrator group cannot be deleted.");
                 }
 
-                if (await _context.um_user_group.AnyAsync(e => e.group_id == group.group_id && e.isDeleted != true))
+                if (await _unitOfWork.UmGroupApp.HasActiveUsersAsync(group.group_id))
                 {
                     return Fail("Group is still assigned to one or more users.");
                 }
@@ -358,8 +277,8 @@ public class ApprovalService : IApprovalService
                 return Fail("Unknown approval type.");
             }
 
-            _context.temp_group_app_pending.Remove(pending);
-            await _context.SaveChangesAsync();
+            _unitOfWork.TempGroupAppPending.Remove(pending);
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             await AuditAsync("GroupApproval", "APPROVE", $"Group {pending.group_id} approved ({TypeLabel(pending.approval_type_id)}).");
             await NotifyAsync(pending.created_by, $"Group {pending.group_id} approved.");
@@ -375,91 +294,26 @@ public class ApprovalService : IApprovalService
 
     public async Task<BaseGeneralResponse> RejectGroupAsync(long id)
     {
-        var pending = await _context.temp_group_app_pending.FirstOrDefaultAsync(e => e.id == id);
+        var pending = await _unitOfWork.TempGroupAppPending.GetByIdAsync(id);
         if (pending == null)
         {
             return Fail("Pending request not found.");
         }
 
-        _context.temp_group_app_pending.Remove(pending);
-        await _context.SaveChangesAsync();
+        _unitOfWork.TempGroupAppPending.Remove(pending);
+        await _unitOfWork.SaveChangesAsync();
         await AuditAsync("GroupApproval", "REJECT", $"Group {pending.group_id} rejected ({TypeLabel(pending.approval_type_id)}).");
         await NotifyAsync(pending.created_by, $"Group {pending.group_id} rejected.");
         return Success("Group request rejected.");
     }
 
-    public async Task<GeneralListResponseDto<RoleApprovalListItemDto>> GetPendingRolesAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
-
-        var rows = await _context.tb_parameter_sytem_temporary
-            .Where(e => e.table_name == "um_user_group"
-                        && (e.type == Const.ApprovalType.ADD
-                            || e.type == Const.ApprovalType.MODIFIED
-                            || e.type == Const.ApprovalType.DELETE))
-            .OrderByDescending(e => e.created_date)
-            .ToListAsync();
-
-        var details = await LoadDetailsAsync(rows.Select(e => e.id));
-        var userIds = details.Values.Select(GetUserId).Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList();
-        userIds.AddRange(rows.Select(e => e.created_by ?? string.Empty).Where(e => e.Length > 0));
-        userIds = userIds.Distinct().ToList();
-        var groupIds = details.Values.Select(values => Get(values, "group_id")).Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList();
-
-        var users = await _context.um_user_app.Where(e => userIds.Contains(e.user_id)).ToDictionaryAsync(e => e.user_id, e => e.full_name);
-        var groups = await _context.um_group_app.Where(e => groupIds.Contains(e.group_id)).ToDictionaryAsync(e => e.group_id, e => e.group_name);
-
-        var list = rows.Select(row =>
-        {
-            var values = details.GetValueOrDefault(row.id) ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            var userId = Get(values, "user_id") ?? string.Empty;
-            var groupId = Get(values, "group_id");
-            return new RoleApprovalListItemDto
-            {
-                Id = row.id,
-                UserId = userId,
-                FullName = users.GetValueOrDefault(userId),
-                GroupId = groupId,
-                GroupName = groupId == null ? null : groups.GetValueOrDefault(groupId),
-                CanAddEdit = ParseBool(Get(values, "can_add_edit")),
-                CanDelete = ParseBool(Get(values, "can_delete")),
-                CanReadOnly = ParseBool(Get(values, "can_read_only")),
-                ApprovalType = TypeLabel(row.type),
-                RequesterFullName = users.GetValueOrDefault(row.created_by ?? string.Empty) ?? row.created_by,
-                CreatedDate = row.created_date,
-            };
-        }).ToList();
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            list = list.Where(x =>
-                x.UserId.Contains(search)
-                || (x.FullName != null && x.FullName.Contains(search))
-                || (x.GroupName != null && x.GroupName.Contains(search))).ToList();
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "fullname" => desc ? list.OrderByDescending(x => x.FullName).ToList() : list.OrderBy(x => x.FullName).ToList(),
-            "groupname" => desc ? list.OrderByDescending(x => x.GroupName).ToList() : list.OrderBy(x => x.GroupName).ToList(),
-            "createddate" => desc ? list.OrderByDescending(x => x.CreatedDate).ToList() : list.OrderBy(x => x.CreatedDate).ToList(),
-            _ => desc ? list.OrderByDescending(x => x.UserId).ToList() : list.OrderBy(x => x.UserId).ToList(),
-        };
-
-        return new GeneralListResponseDto<RoleApprovalListItemDto>
-        {
-            Data = list.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
-            TotalCount = list.Count,
-        };
-    }
+    public Task<GeneralListResponseDto<RoleApprovalListItemDto>> GetPendingRolesAsync(DataTableRequestDto request)
+        => _queryService.GetPendingRolesAsync(request);
 
     public async Task<BaseGeneralResponse> ApproveRoleAsync(Guid id)
     {
-        var temporary = await _context.tb_parameter_sytem_temporary.FirstOrDefaultAsync(e => e.id == id && e.table_name == "um_user_group");
-        if (temporary == null)
+        var temporary = await _unitOfWork.ParameterStaging.GetByIdAsync(id);
+        if (temporary == null || temporary.table_name != "um_user_group")
         {
             return Fail("Pending request not found.");
         }
@@ -473,20 +327,20 @@ public class ApprovalService : IApprovalService
         }
 
         if (string.IsNullOrWhiteSpace(groupId)
-            || !await _context.um_group_app.AnyAsync(e => e.group_id == groupId && e.isDeleted != true))
+            || !await _unitOfWork.UmGroupApp.ExistsActiveAsync(groupId))
         {
             return Fail("Group not found.");
         }
 
-        if (!await _context.um_user_app.AnyAsync(e => e.user_id == userId && e.isDeleted != true))
+        if (!await _unitOfWork.UmUserApp.ExistsActiveAsync(userId))
         {
             return Fail("User not found.");
         }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
-            var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == userId);
+            var role = await _unitOfWork.UmUserGroup.GetByIdAsync(userId);
             var now = DateTime.Now;
 
             if (temporary.type == Const.ApprovalType.DELETE)
@@ -524,7 +378,7 @@ public class ApprovalService : IApprovalService
                         createdBy = temporary.created_by,
                         createdDate = temporary.created_date,
                     };
-                    await _context.um_user_group.AddAsync(role);
+                    await _unitOfWork.UmUserGroup.AddAsync(role);
                 }
 
                 role.group_id = groupId;
@@ -547,7 +401,7 @@ public class ApprovalService : IApprovalService
             }
 
             await RemoveTemporaryAsync(temporary);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             await AuditAsync("RoleApproval", "APPROVE", $"Role {userId} approved ({TypeLabel(temporary.type)}).");
             await NotifyAsync(temporary.created_by, $"Role {userId} approved.");
@@ -566,72 +420,13 @@ public class ApprovalService : IApprovalService
         return await RejectTemporaryAsync(id, "um_user_group", "RoleApproval");
     }
 
-    public async Task<GeneralListResponseDto<MenuApprovalListItemDto>> GetPendingMenusAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
-
-        var rows = await _context.tb_parameter_sytem_temporary
-            .Where(e => e.table_name == "um_menu"
-                        && (e.type == Const.ApprovalType.ADD
-                            || e.type == Const.ApprovalType.MODIFIED
-                            || e.type == Const.ApprovalType.DELETE))
-            .OrderByDescending(e => e.created_date)
-            .ToListAsync();
-
-        var details = await LoadDetailsAsync(rows.Select(e => e.id));
-        var requesterIds = rows.Select(e => e.created_by).Where(e => !string.IsNullOrWhiteSpace(e)).Distinct().ToList();
-        var requesters = await _context.um_user_app.Where(e => requesterIds.Contains(e.user_id)).ToDictionaryAsync(e => e.user_id, e => e.full_name);
-
-        var list = rows.Select(row =>
-        {
-            var values = details.GetValueOrDefault(row.id) ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
-            return new MenuApprovalListItemDto
-            {
-                Id = row.id,
-                MenuId = ParseLong(Get(values, "id")),
-                MenuUnique = Get(values, "menu_unique") ?? string.Empty,
-                MenuName = Get(values, "menu_name"),
-                MenuUrl = Get(values, "menu_url"),
-                ParentLevelId = Get(values, "parent_level_id"),
-                MenuUniqueParent = Get(values, "menu_unique_parent"),
-                MenuIcon = Get(values, "menu_icon"),
-                OrderSeq = Get(values, "order_seq"),
-                ComponentType = Get(values, "component_type"),
-                ApprovalType = TypeLabel(row.type),
-                RequesterFullName = requesters.GetValueOrDefault(row.created_by ?? string.Empty) ?? row.created_by,
-                CreatedDate = row.created_date,
-            };
-        }).ToList();
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            list = list.Where(x =>
-                x.MenuUnique.Contains(search)
-                || (x.MenuName != null && x.MenuName.Contains(search))
-                || (x.MenuUrl != null && x.MenuUrl.Contains(search))).ToList();
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "menuname" => desc ? list.OrderByDescending(x => x.MenuName).ToList() : list.OrderBy(x => x.MenuName).ToList(),
-            "createddate" => desc ? list.OrderByDescending(x => x.CreatedDate).ToList() : list.OrderBy(x => x.CreatedDate).ToList(),
-            _ => desc ? list.OrderByDescending(x => x.MenuUnique).ToList() : list.OrderBy(x => x.MenuUnique).ToList(),
-        };
-
-        return new GeneralListResponseDto<MenuApprovalListItemDto>
-        {
-            Data = list.Skip((page - 1) * pageSize).Take(pageSize).ToList(),
-            TotalCount = list.Count,
-        };
-    }
+    public Task<GeneralListResponseDto<MenuApprovalListItemDto>> GetPendingMenusAsync(DataTableRequestDto request)
+        => _queryService.GetPendingMenusAsync(request);
 
     public async Task<BaseGeneralResponse> ApproveMenuAsync(Guid id)
     {
-        var temporary = await _context.tb_parameter_sytem_temporary.FirstOrDefaultAsync(e => e.id == id && e.table_name == "um_menu");
-        if (temporary == null)
+        var temporary = await _unitOfWork.ParameterStaging.GetByIdAsync(id);
+        if (temporary == null || temporary.table_name != "um_menu")
         {
             return Fail("Pending request not found.");
         }
@@ -643,13 +438,13 @@ public class ApprovalService : IApprovalService
             return Fail("Menu unique is required.");
         }
 
-        await using var transaction = await _context.Database.BeginTransactionAsync();
+        await using var transaction = await _unitOfWork.BeginTransactionAsync();
         try
         {
             var menuId = ParseLong(Get(values, "id"));
             var menu = menuId > 0
-                ? await _context.um_menu.FirstOrDefaultAsync(e => e.id == menuId)
-                : await _context.um_menu.FirstOrDefaultAsync(e => e.menu_unique == menuUnique);
+                ? await _unitOfWork.Menus.GetByIdAsync(menuId)
+                : await _unitOfWork.Menus.GetByUniqueAsync(menuUnique);
             var now = DateTime.Now;
 
             if (temporary.type == Const.ApprovalType.DELETE)
@@ -659,7 +454,7 @@ public class ApprovalService : IApprovalService
                     return Fail("Menu not found.");
                 }
 
-                if (await _context.um_menu.AnyAsync(e => e.menu_unique_parent == menu.menu_unique && e.isDeleted != true))
+                if (await _unitOfWork.Menus.HasActiveChildrenAsync(menu.menu_unique))
                 {
                     return Fail("Menu still has child menus.");
                 }
@@ -672,7 +467,7 @@ public class ApprovalService : IApprovalService
                 menu.approvedBy = Actor;
                 menu.approvedDate = now;
 
-                var assignments = await _context.um_group_menu.Where(e => e.menu_id == menu.id).ToListAsync();
+                var assignments = await _unitOfWork.GroupMenus.GetByMenuIdAsync(menu.id);
                 foreach (var assignment in assignments)
                 {
                     assignment.isActive = false;
@@ -693,7 +488,9 @@ public class ApprovalService : IApprovalService
                     return Fail("Menu not found.");
                 }
 
-                if (await _context.um_menu.AnyAsync(e => e.menu_unique == menuUnique && (menu == null || e.id != menu.id)))
+                if (menu == null
+                    ? await _unitOfWork.Menus.AnyByUniqueAsync(menuUnique)
+                    : await _unitOfWork.Menus.ExistsAnyByUniqueExceptIdAsync(menuUnique, menu.id))
                 {
                     return Fail("Menu unique already exists.");
                 }
@@ -706,7 +503,7 @@ public class ApprovalService : IApprovalService
                         return Fail("Menu cannot be its own parent.");
                     }
 
-                    if (!await _context.um_menu.AnyAsync(e => e.menu_unique == parentUnique && e.isDeleted != true))
+                    if (!await _unitOfWork.Menus.ExistsActiveByUniqueAsync(parentUnique))
                     {
                         return Fail("Parent menu not found.");
                     }
@@ -720,11 +517,11 @@ public class ApprovalService : IApprovalService
                         createdBy = temporary.created_by,
                         createdDate = temporary.created_date,
                     };
-                    await _context.um_menu.AddAsync(menu);
+                    await _unitOfWork.Menus.AddAsync(menu);
                 }
                 else if (menu.menu_unique != menuUnique)
                 {
-                    var children = await _context.um_menu.Where(e => e.menu_unique_parent == menu.menu_unique).ToListAsync();
+                    var children = await _unitOfWork.Menus.GetByParentAsync(menu.menu_unique);
                     foreach (var child in children)
                     {
                         child.menu_unique_parent = menuUnique;
@@ -757,7 +554,7 @@ public class ApprovalService : IApprovalService
             }
 
             await RemoveTemporaryAsync(temporary);
-            await _context.SaveChangesAsync();
+            await _unitOfWork.SaveChangesAsync();
             await transaction.CommitAsync();
             await AuditAsync("MenuApproval", "APPROVE", $"Menu {menuUnique} approved ({TypeLabel(temporary.type)}).");
             await NotifyAsync(temporary.created_by, $"Menu {menuUnique} approved.");
@@ -778,19 +575,19 @@ public class ApprovalService : IApprovalService
 
     private async Task<BaseGeneralResponse> RejectTemporaryAsync(Guid id, string tableName, string auditEntity)
     {
-        var temporary = await _context.tb_parameter_sytem_temporary.FirstOrDefaultAsync(e => e.id == id && e.table_name == tableName);
-        if (temporary == null)
+        var temporary = await _unitOfWork.ParameterStaging.GetByIdAsync(id);
+        if (temporary == null || temporary.table_name != tableName)
         {
             return Fail("Pending request not found.");
         }
 
-        var key = await _context.tb_parameter_sytem_temporary_detail
-            .Where(e => e.tb_parameter_sytem_temporary_id == id && (e.column_name == "user_id" || e.column_name == "menu_unique"))
-            .Select(e => e.value)
-            .FirstOrDefaultAsync();
+        var details = await _unitOfWork.ParameterStaging.GetDetailsAsync(id);
+        var key = details
+            .FirstOrDefault(e => e.column_name == "user_id" || e.column_name == "menu_unique")
+            ?.value;
 
         await RemoveTemporaryAsync(temporary);
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         await AuditAsync(auditEntity, "REJECT", $"{tableName} {key} rejected ({TypeLabel(temporary.type)}).");
         await NotifyAsync(temporary.created_by, $"{tableName} {key} rejected.");
         return Success("Request rejected.");
@@ -803,7 +600,7 @@ public class ApprovalService : IApprovalService
             return;
         }
 
-        var role = await _context.um_user_group.FirstOrDefaultAsync(e => e.user_id == pending.user_id);
+        var role = await _unitOfWork.UmUserGroup.GetByIdAsync(pending.user_id);
         if (role == null)
         {
             role = new um_user_group
@@ -812,7 +609,7 @@ public class ApprovalService : IApprovalService
                 createdBy = pending.created_by,
                 createdDate = pending.created_date,
             };
-            await _context.um_user_group.AddAsync(role);
+            await _unitOfWork.UmUserGroup.AddAsync(role);
             resetPermissions = true;
         }
 
@@ -835,11 +632,11 @@ public class ApprovalService : IApprovalService
 
     private async Task EnsureUserFlagAsync(string userId, DateTime now, bool isNew, bool passwordChanged)
     {
-        var flag = await _context.um_user_app_flag.FirstOrDefaultAsync(e => e.user_id == userId);
+        var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(userId);
         if (flag == null)
         {
             flag = new um_user_app_flag { user_id = userId };
-            await _context.um_user_app_flag.AddAsync(flag);
+            await _unitOfWork.UmUserAppFlag.AddAsync(flag);
             isNew = true;
         }
 
@@ -869,33 +666,16 @@ public class ApprovalService : IApprovalService
         user.gender_id = pending.gender_id;
     }
 
-    private async Task<Dictionary<Guid, Dictionary<string, string?>>> LoadDetailsAsync(IEnumerable<Guid> ids)
-    {
-        var idList = ids.ToList();
-        var rows = await _context.tb_parameter_sytem_temporary_detail
-            .Where(e => idList.Contains(e.tb_parameter_sytem_temporary_id))
-            .ToListAsync();
-
-        return rows
-            .GroupBy(e => e.tb_parameter_sytem_temporary_id)
-            .ToDictionary(
-                e => e.Key,
-                e => e.ToDictionary(x => x.column_name, x => x.value, StringComparer.OrdinalIgnoreCase));
-    }
-
     private async Task<Dictionary<string, string?>> LoadDetailsAsync(Guid id)
     {
-        var all = await LoadDetailsAsync(new[] { id });
-        return all.GetValueOrDefault(id) ?? new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        var rows = await _unitOfWork.ParameterStaging.GetDetailsAsync(id);
+        return rows.ToDictionary(x => x.column_name, x => x.value, StringComparer.OrdinalIgnoreCase);
     }
 
     private async Task RemoveTemporaryAsync(tb_parameter_sytem_temporary temporary)
     {
-        var details = await _context.tb_parameter_sytem_temporary_detail
-            .Where(e => e.tb_parameter_sytem_temporary_id == temporary.id)
-            .ToListAsync();
-        _context.tb_parameter_sytem_temporary_detail.RemoveRange(details);
-        _context.tb_parameter_sytem_temporary.Remove(temporary);
+        var details = await _unitOfWork.ParameterStaging.GetDetailsAsync(temporary.id);
+        _unitOfWork.ParameterStaging.Remove(temporary, details);
     }
 
     private async Task NotifyAsync(string? userId, string message)

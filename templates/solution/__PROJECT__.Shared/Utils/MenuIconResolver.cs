@@ -30,6 +30,7 @@ public static class MenuIconResolver
             "fa fa-flag" => "Flag",
             "fa fa-map-pin" => "PinDrop",
             "fa fa-flask" => "Science",
+            "fa fa-envelope" => "Email",
             "GroupWork" => "Groups",
             "SettingsApplications" => "Settings",
             "SystemUpdateAlt" => "SystemUpdateAlt",

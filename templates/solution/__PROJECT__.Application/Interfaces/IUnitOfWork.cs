@@ -7,7 +7,22 @@ public interface IUnitOfWork
     IUmUserAppRepository UmUserApp { get; }
     IUmUserGroupRepository UmUserGroup { get; }
     IUmUserAppFlagRepository UmUserAppFlag { get; }
+    IUmUserAppSessionRepository UmUserAppSession { get; }
     IRefreshTokenRepository RefreshTokens { get; }
+    IUmGroupAppRepository UmGroupApp { get; }
+    ITempGroupAppPendingRepository TempGroupAppPending { get; }
+    ITempUserAppPendingRepository TempUserAppPending { get; }
+    IUmMenuRepository Menus { get; }
+    IUmGroupMenuRepository GroupMenus { get; }
+    IParameterStagingRepository ParameterStaging { get; }
+    IScreenMenuRepository ScreenMenus { get; }
+    IPasswordResetTokenRepository PasswordResetTokens { get; }
+    IEmailTemplateRepository EmailTemplates { get; }
+    IEmailOutboxRepository EmailOutbox { get; }
+    ITbNotificationRepository Notifications { get; }
+    ITbNotificationTypeRepository NotificationTypes { get; }
+    IEmailProviderRepository EmailProviders { get; }
 
-    Task<int> SaveChangesAsync();
+    Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);
+    Task<IUnitOfWorkTransaction> BeginTransactionAsync(CancellationToken cancellationToken = default);
 }

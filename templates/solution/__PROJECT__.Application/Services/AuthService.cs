@@ -125,6 +125,7 @@ public class AuthService : IAuthService
         flag.session_id = sessionId;
 
         await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
+        await _unitOfWork.UmUserAppSession.UpsertAsync(user.user_id, sessionId);
         await _unitOfWork.RefreshTokens.RevokeAllUserTokensAsync(user.user_id);
         await _unitOfWork.SaveChangesAsync();
 
@@ -135,14 +136,17 @@ public class AuthService : IAuthService
 
         var accessToken = _jwtService.GenerateAccessToken(user, new[] { role }, sessionId);
         var rawRefreshToken = _jwtService.GenerateRefreshToken();
-        var refreshDays = request.RememberMe ? 30 : GetConfigInt("Jwt:RefreshTokenExpirationDays", 7);
+        var refreshExpiry = request.RememberMe
+            ? DateTime.UtcNow.AddDays(GetConfigInt("Jwt:RememberMeExpirationDays", 30))
+            : DateTime.UtcNow.AddHours(GetConfigInt("Jwt:SessionRefreshTokenHours", 12));
 
         var refreshEntity = new um_user_refresh_token
         {
             user_id = user.user_id,
             refresh_token = HashRefreshToken(rawRefreshToken),
-            expiry_date = DateTime.UtcNow.AddDays(refreshDays),
+            expiry_date = refreshExpiry,
             is_revoked = false,
+            remember_me = request.RememberMe,
             createdDate = DateTime.Now,
             isActive = true,
             isDeleted = false,
@@ -194,15 +198,20 @@ public class AuthService : IAuthService
 
         var flag = await _unitOfWork.UmUserAppFlag.GetByUserIdAsync(user.user_id);
         var sessionId = flag?.session_id ?? Guid.NewGuid().ToString("N");
+        await _unitOfWork.UmUserAppSession.UpsertAsync(user.user_id, sessionId);
         var accessToken = _jwtService.GenerateAccessToken(user, roles, sessionId);
         var newRawRefreshToken = _jwtService.GenerateRefreshToken();
 
+        var refreshExpiry = storedToken.remember_me == true
+            ? DateTime.UtcNow.AddDays(GetConfigInt("Jwt:RememberMeExpirationDays", 30))
+            : DateTime.UtcNow.AddHours(GetConfigInt("Jwt:SessionRefreshTokenHours", 12));
         var newRefreshEntity = new um_user_refresh_token
         {
             user_id = user.user_id,
             refresh_token = HashRefreshToken(newRawRefreshToken),
-            expiry_date = DateTime.UtcNow.AddDays(GetConfigInt("Jwt:RefreshTokenExpirationDays", 7)),
+            expiry_date = refreshExpiry,
             is_revoked = false,
+            remember_me = storedToken.remember_me,
             createdDate = DateTime.Now,
             isActive = true,
             isDeleted = false,
@@ -232,6 +241,7 @@ public class AuthService : IAuthService
             await _unitOfWork.UmUserAppFlag.UpdateAsync(flag);
         }
 
+        await _unitOfWork.UmUserAppSession.RemoveAsync(userId);
         await _unitOfWork.SaveChangesAsync();
     }
 

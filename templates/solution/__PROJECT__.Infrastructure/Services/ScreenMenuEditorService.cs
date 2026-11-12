@@ -1,26 +1,27 @@
-using Microsoft.EntityFrameworkCore;
-
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.Screen;
 using __PROJECT__.Application.Interfaces;
+using __PROJECT__.Application.Interfaces.Queries;
 using __PROJECT__.Domain.Entities;
 using __PROJECT__.Domain.Enums;
-using __PROJECT__.Infrastructure.Data;
 
 namespace __PROJECT__.Infrastructure.Services;
 
 public class ScreenMenuEditorService : IScreenMenuEditorService
 {
-    private readonly __PROJECT__DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IScreenMenuQueryService _queryService;
     private readonly ICurrentUserService _currentUser;
     private readonly IErrorLogService _errorLog;
 
     public ScreenMenuEditorService(
-        __PROJECT__DbContext context,
+        IUnitOfWork unitOfWork,
+        IScreenMenuQueryService queryService,
         ICurrentUserService currentUser,
         IErrorLogService errorLog)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
+        _queryService = queryService;
         _currentUser = currentUser;
         _errorLog = errorLog;
     }
@@ -28,105 +29,11 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
     private Task LogErrorAsync(Exception exception)
         => _errorLog.LogAsync("ScreenMenuEditor", "ERROR", exception);
 
-    public async Task<GeneralListResponseDto<ScreenMenuListItemDto>> GetListAsync(DataTableRequestDto request)
-    {
-        var page = Math.Max(1, request.PageNumber);
-        var pageSize = request.PageSize <= 0 ? 10 : Math.Min(request.PageSize, 200);
+    public Task<GeneralListResponseDto<ScreenMenuListItemDto>> GetListAsync(DataTableRequestDto request)
+        => _queryService.GetListAsync(request);
 
-        var query = _context.tb_screen_menu
-            .Where(e => e.isDeleted != true)
-            .Select(e => new ScreenMenuListItemDto
-            {
-                Id = e.id,
-                Description = e.description,
-                IsActive = e.isActive == true,
-                StatusApproval = e.statusApproval,
-                ScreenMenuChildId = e.screen_menu_child_id,
-                ScreenMenuImportExcelProcessId = e.screen_menu_import_excel_process_id,
-                ModifiedDate = e.modifiedDate ?? e.createdDate,
-            });
-
-        if (!string.IsNullOrWhiteSpace(request.SearchTerm))
-        {
-            var search = request.SearchTerm.Trim();
-            query = query.Where(e => e.Id.Contains(search) || (e.Description != null && e.Description.Contains(search)));
-        }
-
-        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
-        {
-            "description" => desc ? query.OrderByDescending(e => e.Description) : query.OrderBy(e => e.Description),
-            "modifieddate" => desc ? query.OrderByDescending(e => e.ModifiedDate) : query.OrderBy(e => e.ModifiedDate),
-            _ => desc ? query.OrderByDescending(e => e.Id) : query.OrderBy(e => e.Id),
-        };
-
-        return new GeneralListResponseDto<ScreenMenuListItemDto>
-        {
-            Data = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(),
-            TotalCount = await query.CountAsync(),
-        };
-    }
-
-    public async Task<ScreenMenuEditDto?> GetAsync(string id)
-    {
-        var screen = await _context.tb_screen_menu.FirstOrDefaultAsync(e => e.id == id && e.isDeleted != true);
-        if (screen == null)
-        {
-            return null;
-        }
-
-        var child = await _context.tb_screen_menu_child.FirstOrDefaultAsync(e => e.screen_menu_child_id == screen.screen_menu_child_id && e.isDeleted != true);
-        var import = await _context.tb_screen_menu_import_excel_process.FirstOrDefaultAsync(e => e.screen_menu_import_excel_process_id == screen.screen_menu_import_excel_process_id && e.isDeleted != true);
-
-        return new ScreenMenuEditDto
-        {
-            Id = screen.id,
-            Description = screen.description,
-            HasButtonLoad = screen.has_button_load == true,
-            HasButtonProcess = screen.has_button_process == true,
-            HasButtonGenerateTxt = screen.has_button_generate_txt == true,
-            HasButtonExportExcel = screen.has_button_export_excel == true,
-            HasButtonAdd = screen.has_button_add == true,
-            HasButtonDelete = screen.has_button_delete == true,
-            HasActionRow = screen.has_action_row == true,
-            HasButtonImportExcel = screen.has_button_import_excel == true,
-            FieldFilter = screen.field_filter,
-            QueryLoad = screen.query_load,
-            QueryLoadParam = screen.query_load_param,
-            QueryProcess = screen.query_process,
-            QueryProcessParam = screen.query_process_param,
-            QueryExportTxt = screen.query_export_txt,
-            QueryExportTxtParam = screen.query_export_txt_param,
-            QueryDelete = screen.query_delete,
-            QueryDeleteParam = screen.query_delete_param,
-            IsActive = screen.isActive == true,
-            ScreenMenuChildId = screen.screen_menu_child_id,
-            ScreenMenuImportExcelProcessId = screen.screen_menu_import_excel_process_id,
-            Child = child == null ? null : new ScreenMenuChildEditDto
-            {
-                ScreenMenuChildId = child.screen_menu_child_id,
-                Description = child.description,
-                Type = child.type,
-                UrlAction = child.url_action,
-                UrlActionParam = child.url_action_param,
-                ModalField = child.modal_field,
-                ModalDetailFieldQuery = child.modal_detail_field_query,
-                ModalDetailFieldQueryParam = child.modal_detail_field_query_param,
-                ModalSaveProcessQuery = child.modal_save_process_query,
-                ModalSaveProcessQueryParam = child.modal_save_process_query_param,
-                IsActive = child.isActive == true,
-            },
-            Import = import == null ? null : new ScreenMenuImportEditDto
-            {
-                ScreenMenuImportExcelProcessId = import.screen_menu_import_excel_process_id,
-                Description = import.description,
-                TableName = import.table_name,
-                FieldInput = import.field_input,
-                WithApproval = import.with_approval == true,
-                IsActive = import.isActive == true,
-            },
-        };
-    }
+    public Task<ScreenMenuEditDto?> GetAsync(string id)
+        => _queryService.GetAsync(id);
 
     public async Task<BaseGeneralResponse> StageAsync(ScreenMenuEditDto dto)
     {
@@ -138,8 +45,8 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
                 return Fail("Screen id and description are required.");
             }
 
-            var existing = await _context.tb_screen_menu.FirstOrDefaultAsync(e => e.id == dto.Id);
-            var type = existing == null ? Const.ApprovalType.ADD : Const.ApprovalType.MODIFIED;
+            var exists = await _unitOfWork.ScreenMenus.ExistsAsync(dto.Id);
+            var type = exists ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
             if (await HasPendingAsync(dto.Id))
             {
                 return Fail("Screen menu already has a pending request.");
@@ -174,7 +81,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
 
             if (dto.Child != null && !string.IsNullOrWhiteSpace(dto.Child.ScreenMenuChildId))
             {
-                var childExists = await _context.tb_screen_menu_child.AnyAsync(e => e.screen_menu_child_id == dto.Child.ScreenMenuChildId);
+                var childExists = await _unitOfWork.ScreenMenus.ChildExistsAsync(dto.Child.ScreenMenuChildId);
                 values["__child_type"] = childExists ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
                 void AddChild(string key, string? value) => values[$"child.{key}"] = value;
                 AddChild("screen_menu_child_id", dto.Child.ScreenMenuChildId);
@@ -192,7 +99,7 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
 
             if (dto.Import != null && !string.IsNullOrWhiteSpace(dto.Import.ScreenMenuImportExcelProcessId))
             {
-                var importExists = await _context.tb_screen_menu_import_excel_process.AnyAsync(e => e.screen_menu_import_excel_process_id == dto.Import.ScreenMenuImportExcelProcessId);
+                var importExists = await _unitOfWork.ScreenMenus.ImportExistsAsync(dto.Import.ScreenMenuImportExcelProcessId);
                 values["__import_type"] = importExists ? Const.ApprovalType.MODIFIED : Const.ApprovalType.ADD;
                 void AddImport(string key, string? value) => values[$"import.{key}"] = value;
                 AddImport("screen_menu_import_excel_process_id", dto.Import.ScreenMenuImportExcelProcessId);
@@ -211,19 +118,15 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
                 created_by = _currentUser.UserId ?? "system",
                 created_date = DateTime.Now,
             };
-            await _context.tb_parameter_sytem_temporary.AddAsync(temporary);
-
-            foreach (var pair in values)
+            var details = values.Select(pair => new tb_parameter_sytem_temporary_detail
             {
-                await _context.tb_parameter_sytem_temporary_detail.AddAsync(new tb_parameter_sytem_temporary_detail
-                {
-                    tb_parameter_sytem_temporary_id = temporary.id,
-                    column_name = pair.Key,
-                    value = pair.Value,
-                });
-            }
+                tb_parameter_sytem_temporary_id = temporary.id,
+                column_name = pair.Key,
+                value = pair.Value,
+            });
 
-            await _context.SaveChangesAsync();
+            await _unitOfWork.ParameterStaging.AddAsync(temporary, details);
+            await _unitOfWork.SaveChangesAsync();
             return Success("Screen menu request sent for approval.");
         }
         catch (Exception ex)
@@ -233,14 +136,8 @@ public class ScreenMenuEditorService : IScreenMenuEditorService
         }
     }
 
-    private async Task<bool> HasPendingAsync(string key)
-        => await (from temporary in _context.tb_parameter_sytem_temporary
-                  join detail in _context.tb_parameter_sytem_temporary_detail
-                      on temporary.id equals detail.tb_parameter_sytem_temporary_id
-                  where temporary.table_name == "tb_screen_menu"
-                        && detail.column_name == "__key"
-                        && detail.value == key
-                  select temporary.id).AnyAsync();
+    private Task<bool> HasPendingAsync(string key)
+        => _unitOfWork.ParameterStaging.HasPendingKeyAsync("tb_screen_menu", "__key", key);
 
     private static string Bool(bool value) => value ? "true" : "false";
 

@@ -1,80 +1,57 @@
-using Microsoft.EntityFrameworkCore;
-
 using __PROJECT__.Application.DTOs.General;
 using __PROJECT__.Application.DTOs.Notification;
 using __PROJECT__.Application.Interfaces;
+using __PROJECT__.Application.Interfaces.Queries;
 using __PROJECT__.Domain.Entities;
 using __PROJECT__.Domain.Enums;
-using __PROJECT__.Infrastructure.Data;
 
 namespace __PROJECT__.Infrastructure.Services;
 
 public class NotificationService : INotificationService
 {
-    private readonly __PROJECT__DbContext _context;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly INotificationQueryService _queryService;
     private readonly INotificationPusher _pusher;
     private readonly IErrorLogService _errorLog;
 
     public NotificationService(
-        __PROJECT__DbContext context,
+        IUnitOfWork unitOfWork,
+        INotificationQueryService queryService,
         INotificationPusher pusher,
         IErrorLogService errorLog)
     {
-        _context = context;
+        _unitOfWork = unitOfWork;
+        _queryService = queryService;
         _pusher = pusher;
         _errorLog = errorLog;
     }
 
-    public async Task<List<NotificationDto>> GetRecentAsync(string userId, int top = 20)
-    {
-        var notifications = await (from notification in _context.tb_notification
-                                   join type in _context.tb_notification_type
-                                       on notification.notification_type_id equals type.id into typeJoin
-                                   from type in typeJoin.DefaultIfEmpty()
-                                   where notification.receiver_user_id == userId
-                                   orderby notification.created_date descending
-                                   select new NotificationDto
-                                   {
-                                       Id = notification.id,
-                                       Type = type != null ? type.short_text : null,
-                                       ShortText = type != null ? type.short_text : null,
-                                       LongText = type != null ? type.long_text : null,
-                                       Href = notification.reff_id ?? (type != null ? type.href : null),
-                                       IsSeen = notification.is_seen == true,
-                                       CreatedDate = notification.created_date,
-                                   })
-            .Take(Math.Clamp(top, 1, 100))
-            .ToListAsync();
-
-        return notifications;
-    }
+    public Task<List<NotificationDto>> GetRecentAsync(string userId, int top = 20)
+        => _queryService.GetRecentAsync(userId, top);
 
     public async Task<BaseGeneralResponse> MarkSeenAsync(string userId, long id)
     {
-        var notification = await _context.tb_notification
-            .FirstOrDefaultAsync(e => e.id == id && e.receiver_user_id == userId);
+        var notification = await _unitOfWork.Notifications.GetByIdForUserAsync(id, userId);
         if (notification == null)
         {
             return Fail("Notification not found.");
         }
 
         notification.is_seen = true;
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         return Success("Notification marked as read.");
     }
 
     public async Task<BaseGeneralResponse> MarkAllSeenAsync(string userId)
     {
-        var notifications = await _context.tb_notification
-            .Where(e => e.receiver_user_id == userId && e.is_seen != true)
-            .ToListAsync();
+        var notifications = await _unitOfWork.Notifications.GetUnseenByUserAsync(userId);
 
         foreach (var notification in notifications)
         {
             notification.is_seen = true;
         }
 
-        await _context.SaveChangesAsync();
+        await _unitOfWork.SaveChangesAsync();
         return Success("Notifications marked as read.");
     }
 
@@ -101,7 +78,7 @@ public class NotificationService : INotificationService
             created_date = DateTime.Now,
         };
 
-        if (typeId == null || !await _context.tb_notification_type.AnyAsync(e => e.id == typeId, cancellationToken))
+        if (typeId == null || !await _unitOfWork.NotificationTypes.ExistsAsync(typeId.Value, cancellationToken))
         {
             var type = new tb_notification_type
             {
@@ -114,7 +91,7 @@ public class NotificationService : INotificationService
                 created_by = "system",
                 created_date = DateTime.Now,
             };
-            await _context.tb_notification_type.AddAsync(type, cancellationToken);
+            await _unitOfWork.NotificationTypes.AddAsync(type, cancellationToken);
             notification.notification_type_id = type.id;
         }
         else
@@ -122,8 +99,8 @@ public class NotificationService : INotificationService
             // Type metadata is shared; per-notification links live in reff_id.
         }
 
-        await _context.tb_notification.AddAsync(notification, cancellationToken);
-        await _context.SaveChangesAsync(cancellationToken);
+        await _unitOfWork.Notifications.AddAsync(notification, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         try
         {

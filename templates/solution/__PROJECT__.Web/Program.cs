@@ -41,6 +41,7 @@ builder.Services.AddScoped<MenuService>();
 builder.Services.AddScoped<SettingApiService>();
 builder.Services.AddScoped<ApprovalApiService>();
 builder.Services.AddScoped<ParameterApiService>();
+builder.Services.AddScoped<EmailProviderApiService>();
 builder.Services.AddScoped<DynamicApiService>();
 builder.Services.AddScoped<NotificationApiService>();
 builder.Services.AddScoped<ExportApiService>();
@@ -49,6 +50,7 @@ builder.Services.AddScoped<IExcelFilePicker, NoopExcelFilePicker>();
 
 builder.Services.AddHttpClient("ApiClient", client => client.BaseAddress = new Uri(apiBaseUrl))
     .AddHttpMessageHandler<AuthenticatingHttpHandler>();
+builder.Services.AddHttpClient("SignalR");
 
 await builder.Build().RunAsync();
 

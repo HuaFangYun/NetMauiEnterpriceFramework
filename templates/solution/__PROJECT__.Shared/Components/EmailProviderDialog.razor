@@ -1,0 +1,165 @@
+@using __PROJECT__.Application.DTOs.Email
+@inject EmailProviderApiService EmailProviderApi
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">@(IsEdit ? "Edit Email Provider" : "Add Email Provider")</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid Spacing="3">
+            <MudItem xs="12" md="6">
+                <MudSelect T="string" @bind-Value="_model.ProviderType" Label="Provider Type" Variant="Variant.Outlined" Required="true" Clearable="true">
+                    <MudSelectItem Value="@("SMTP")">SMTP</MudSelectItem>
+                    <MudSelectItem Value="@("GMAIL")">Gmail API (OAuth)</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.ProviderName" Label="Provider Name" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.FromEmail" Label="From Email" Variant="Variant.Outlined" Required="true" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudTextField @bind-Value="_model.FromName" Label="From Name" Variant="Variant.Outlined" />
+            </MudItem>
+            <MudItem xs="12" md="6">
+                <MudNumericField T="int" @bind-Value="_model.Priority" Label="Priority" Variant="Variant.Outlined" Min="1" />
+            </MudItem>
+            <MudItem xs="12" md="6"></MudItem>
+
+            @if (IsSmtp)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.Host" Label="SMTP Host" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="int" @bind-Value="_model.Port" Label="Port" Variant="Variant.Outlined" Min="1" Max="65535" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.Username" Label="SMTP Username" Variant="Variant.Outlined" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.Password"
+                                  Label="SMTP Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  HelperText="@(_model.HasPassword ? "Leave blank to keep the existing password." : null)" />
+                </MudItem>
+                <MudItem xs="12" Class="d-flex align-items-center">
+                    <MudSwitch T="bool" @bind-Value="_model.EnableSsl" Color="Color.Primary" Label="Use SSL / TLS" />
+                </MudItem>
+            }
+            else if (IsGmail)
+            {
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.ClientId" Label="OAuth Client ID" Variant="Variant.Outlined" Required="true" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.ClientSecret"
+                                  Label="OAuth Client Secret"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  HelperText="@(_model.HasClientSecret ? "Leave blank to keep the existing secret." : null)" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField @bind-Value="_model.RefreshToken"
+                                  Label="OAuth Refresh Token"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Password"
+                                  HelperText="@(_model.HasRefreshToken ? "Leave blank to keep the existing token." : null)" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info">
+                        Refresh token must be generated with the Gmail send scope: https://www.googleapis.com/auth/gmail.send
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <MudItem xs="12" Class="d-flex align-items-center">
+                <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Primary" Label="Active" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Text" OnClick="@(_ => MudDialog.Cancel())">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@_saving" OnClick="SubmitAsync">
+            @(_saving ? "Saving..." : "Save")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter]
+    private IMudDialogInstance MudDialog { get; set; } = default!;
+
+    [Parameter]
+    public EmailProviderDto? Provider { get; set; }
+
+    private EmailProviderDto _model = new();
+    private bool _saving;
+
+    private bool IsEdit => _model.Id != 0;
+    private bool IsSmtp => string.Equals(_model.ProviderType, "SMTP", StringComparison.OrdinalIgnoreCase);
+    private bool IsGmail => string.Equals(_model.ProviderType, "GMAIL", StringComparison.OrdinalIgnoreCase);
+
+    protected override void OnInitialized()
+    {
+        if (Provider != null)
+        {
+            _model = Provider;
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!IsSmtp && !IsGmail)
+        {
+            Snackbar.Add("Select SMTP or Gmail as provider type.", Severity.Warning);
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_model.FromEmail))
+        {
+            Snackbar.Add("From email is required.", Severity.Warning);
+            return;
+        }
+
+        if (IsSmtp && (string.IsNullOrWhiteSpace(_model.Host) || (!_model.HasPassword && string.IsNullOrWhiteSpace(_model.Password))))
+        {
+            Snackbar.Add("SMTP host and password are required.", Severity.Warning);
+            return;
+        }
+
+        if (IsGmail
+            && (string.IsNullOrWhiteSpace(_model.ClientId)
+                || (!_model.HasClientSecret && string.IsNullOrWhiteSpace(_model.ClientSecret))
+                || (!_model.HasRefreshToken && string.IsNullOrWhiteSpace(_model.RefreshToken))))
+        {
+            Snackbar.Add("Gmail Client ID, Client Secret, and Refresh Token are required.", Severity.Warning);
+            return;
+        }
+
+        _saving = true;
+        try
+        {
+            var result = await EmailProviderApi.SaveAsync(_model);
+            if (!result.Success)
+            {
+                Snackbar.Add(result.Message ?? "Save failed.", Severity.Error);
+                return;
+            }
+
+            Snackbar.Add(result.Message ?? "Email provider saved.", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(true));
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

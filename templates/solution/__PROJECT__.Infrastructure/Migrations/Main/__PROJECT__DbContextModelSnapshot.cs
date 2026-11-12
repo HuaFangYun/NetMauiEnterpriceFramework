@@ -480,6 +480,208 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                     b.ToTable("rf_message");
                 });
 
+            modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_email_outbox", b =>
+                {
+                    b.Property<Guid>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<int>("attempt_count")
+                        .HasColumnType("int");
+
+                    b.Property<string>("body_html")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("body_text")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("created_date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("last_error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("next_attempt_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("provider_type")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("recipient")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("reference_id")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("reference_type")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("sent_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("subject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("status", "next_attempt_at");
+
+                    b.ToTable("tb_email_outbox");
+                });
+
+            modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_email_provider", b =>
+                {
+                    b.Property<int>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("id"));
+
+                    b.Property<string>("configuration_json")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("createdBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("createdDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_date");
+
+                    b.Property<string>("deletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTime?>("deletedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("deleted_date");
+
+                    b.Property<string>("from_email")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("from_name")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<bool?>("isActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool?>("isDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("last_test_message")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("last_test_status")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("last_tested_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("modifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<DateTime?>("modifiedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("modified_date");
+
+                    b.Property<int?>("priority")
+                        .HasColumnType("int");
+
+                    b.Property<string>("provider_name")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("provider_type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("priority");
+
+                    b.ToTable("tb_email_provider");
+                });
+
+            modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_email_template", b =>
+                {
+                    b.Property<string>("template_key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("body_html")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("body_text")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("createdBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("createdDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("created_date");
+
+                    b.Property<string>("deletedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("deleted_by");
+
+                    b.Property<DateTime?>("deletedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("deleted_date");
+
+                    b.Property<bool?>("isActive")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool?>("isDeleted")
+                        .HasColumnType("bit")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("modifiedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)")
+                        .HasColumnName("modified_by");
+
+                    b.Property<DateTime?>("modifiedDate")
+                        .HasColumnType("datetime2")
+                        .HasColumnName("modified_date");
+
+                    b.Property<string>("subject")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.HasKey("template_key");
+
+                    b.ToTable("tb_email_template");
+                });
+
             modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_notification", b =>
                 {
                     b.Property<long>("id")
@@ -676,6 +878,45 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                     b.HasKey("tb_parameter_sytem_temporary_id", "column_name");
 
                     b.ToTable("tb_parameter_sytem_temporary_detail");
+                });
+
+            modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_password_reset_token", b =>
+                {
+                    b.Property<Guid>("id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("created_by_ip")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("created_date")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("expires_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("token_hash")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTime?>("used_at")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("user_id")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("id");
+
+                    b.HasIndex("token_hash")
+                        .IsUnique();
+
+                    b.HasIndex("user_id");
+
+                    b.ToTable("tb_password_reset_token");
                 });
 
             modelBuilder.Entity("__PROJECT__.Domain.Entities.tb_report_set", b =>
@@ -1815,6 +2056,9 @@ namespace __PROJECT__.Infrastructure.Migrations.Main
                     b.Property<string>("refresh_token")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
+
+                    b.Property<bool?>("remember_me")
+                        .HasColumnType("bit");
 
                     b.Property<string>("revoked_by")
                         .HasMaxLength(100)

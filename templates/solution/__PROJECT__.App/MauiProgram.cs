@@ -21,12 +21,15 @@ public static class MauiProgram
                 fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular");
             });
 
-        builder.Services.AddMudServices();
+        builder.Services.AddMudServices(config =>
+        {
+            config.SnackbarConfiguration.PositionClass = MudBlazor.Defaults.Classes.Position.TopRight;
+            config.SnackbarConfiguration.PreventDuplicates = false;
+            config.SnackbarConfiguration.NewestOnTop = false;
+        });
         builder.Services.AddMauiBlazorWebView();
 
-        var apiBaseUrl = DeviceInfo.Platform == DevicePlatform.Android
-            ? "https://10.0.2.2:7143"
-            : "https://localhost:7143";
+        var apiBaseUrl = MauiApiSettings.ResolveApiBaseUrl(CreateHttpHandler);
 
         builder.Services.AddScoped(_ => new HttpClient(CreateHttpHandler())
         {
@@ -50,15 +53,18 @@ public static class MauiProgram
         builder.Services.AddScoped<SettingApiService>();
         builder.Services.AddScoped<ApprovalApiService>();
         builder.Services.AddScoped<ParameterApiService>();
+        builder.Services.AddScoped<EmailProviderApiService>();
         builder.Services.AddScoped<DynamicApiService>();
         builder.Services.AddScoped<NotificationApiService>();
         builder.Services.AddScoped<ExportApiService>();
         builder.Services.AddScoped<ScreenMenuApiService>();
-        builder.Services.AddSingleton<IExcelFilePicker, MauiExcelFilePicker>();
+        builder.Services.AddScoped<IExcelFilePicker, MauiExcelFilePicker>();
 
         builder.Services.AddHttpClient("ApiClient", client => client.BaseAddress = new Uri(apiBaseUrl))
             .ConfigurePrimaryHttpMessageHandler(CreateHttpHandler)
             .AddHttpMessageHandler<AuthenticatingHttpHandler>();
+        builder.Services.AddHttpClient("SignalR")
+            .ConfigurePrimaryHttpMessageHandler(CreateHttpHandler);
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
