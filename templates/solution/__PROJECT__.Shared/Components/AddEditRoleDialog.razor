@@ -24,16 +24,16 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" Class="d-flex align-items-center">
-                <MudCheckBox T="bool" @bind-Value="_model.CanAddEdit" Color="Color.Primary">Can Add / Edit</MudCheckBox>
+                <MudSwitch T="bool" @bind-Value="_model.CanAddEdit" Color="Color.Primary" Label="Can Add / Edit" />
             </MudItem>
             <MudItem xs="12" Class="d-flex align-items-center">
-                <MudCheckBox T="bool" @bind-Value="_model.CanDelete" Color="Color.Primary">Can Delete</MudCheckBox>
+                <MudSwitch T="bool" @bind-Value="_model.CanDelete" Color="Color.Primary" Label="Can Delete" />
             </MudItem>
             <MudItem xs="12" Class="d-flex align-items-center">
-                <MudCheckBox T="bool" @bind-Value="_model.CanReadOnly" Color="Color.Primary">Read Only</MudCheckBox>
+                <MudSwitch T="bool" @bind-Value="_model.CanReadOnly" Color="Color.Primary" Label="Read Only" />
             </MudItem>
             <MudItem xs="12" Class="d-flex align-items-center">
-                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+                <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Primary" Label="Active" />
             </MudItem>
         </MudGrid>
     </DialogContent>

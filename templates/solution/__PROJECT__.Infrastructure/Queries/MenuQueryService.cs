@@ -58,10 +58,13 @@ public class MenuQueryService : IMenuQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "id" => desc ? query.OrderByDescending(x => x.Id) : query.OrderBy(x => x.Id),
             "menuname" => desc ? query.OrderByDescending(x => x.MenuName) : query.OrderBy(x => x.MenuName),
             "menuunique" => desc ? query.OrderByDescending(x => x.MenuUnique) : query.OrderBy(x => x.MenuUnique),
             "parentlevelid" => desc ? query.OrderByDescending(x => x.ParentLevelId) : query.OrderBy(x => x.ParentLevelId),
+            "menuparent" => desc ? query.OrderByDescending(x => x.ParentName) : query.OrderBy(x => x.ParentName),
             "orderseq" => desc ? query.OrderByDescending(x => x.OrderSeq) : query.OrderBy(x => x.OrderSeq),
+            "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),
             _ => desc ? query.OrderByDescending(x => x.Id) : query.OrderBy(x => x.Id),
         };
 

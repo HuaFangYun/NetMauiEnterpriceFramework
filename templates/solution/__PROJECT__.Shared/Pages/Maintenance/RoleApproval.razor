@@ -43,12 +43,12 @@
                           Class="approval-search" />
         </ToolBarContent>
         <HeaderContent>
-            <MudTh>User</MudTh>
-            <MudTh>Group</MudTh>
-            <MudTh>Add/Edit</MudTh>
-            <MudTh>Delete</MudTh>
-            <MudTh>Read Only</MudTh>
-            <MudTh>Type</MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="fullname">User</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="groupname">Group</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="canadded">Add/Edit</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="candelete">Delete</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="canreadonly">Read Only</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleApprovalListItemDto" SortLabel="approvaltype">Type</MudTableSortLabel></MudTh>
             <MudTh Style="text-align:center;">Action</MudTh>
         </HeaderContent>
         <RowTemplate>

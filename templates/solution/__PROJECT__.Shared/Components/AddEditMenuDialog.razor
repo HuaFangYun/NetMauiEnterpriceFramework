@@ -48,7 +48,7 @@
                 <MudNumericField T="int?" @bind-Value="_model.OrderSeq" Label="Order Sequence" Variant="Variant.Outlined" />
             </MudItem>
             <MudItem xs="12">
-                <MudCheckBox T="bool" @bind-Value="_model.IsActive" Color="Color.Primary">Active</MudCheckBox>
+                <MudSwitch T="bool" @bind-Value="_model.IsActive" Color="Color.Primary" Label="Active" />
             </MudItem>
         </MudGrid>
     </DialogContent>

@@ -32,10 +32,20 @@ public class EmailProviderQueryService : IEmailProviderQueryService
                 || (e.from_email != null && e.from_email.Contains(search)));
         }
 
+        var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
+        query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
+        {
+            "providertype" => desc ? query.OrderByDescending(e => e.provider_type) : query.OrderBy(e => e.provider_type),
+            "providername" => desc ? query.OrderByDescending(e => e.provider_name) : query.OrderBy(e => e.provider_name),
+            "fromemail" => desc ? query.OrderByDescending(e => e.from_email) : query.OrderBy(e => e.from_email),
+            "priority" => desc ? query.OrderByDescending(e => e.priority ?? 100) : query.OrderBy(e => e.priority ?? 100),
+            "isactive" => desc ? query.OrderByDescending(e => e.isActive) : query.OrderBy(e => e.isActive),
+            "lasttestedat" => desc ? query.OrderByDescending(e => e.last_tested_at) : query.OrderBy(e => e.last_tested_at),
+            _ => query.OrderBy(e => e.priority ?? 100).ThenBy(e => e.id),
+        };
+
         var total = await query.CountAsync(cancellationToken);
         var entities = await query
-            .OrderBy(e => e.priority ?? 100)
-            .ThenBy(e => e.id)
             .Skip((Math.Max(request.PageNumber, 1) - 1) * request.PageSize)
             .Take(request.PageSize)
             .ToListAsync(cancellationToken);

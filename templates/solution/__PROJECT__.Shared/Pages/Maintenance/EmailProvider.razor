@@ -44,12 +44,12 @@
         </ToolBarContent>
         <HeaderContent>
             <MudTh Style="text-align:center;">Actions</MudTh>
-            <MudTh>Type</MudTh>
-            <MudTh>Name</MudTh>
-            <MudTh>From Email</MudTh>
-            <MudTh>Priority</MudTh>
-            <MudTh>Active</MudTh>
-            <MudTh>Last Test</MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="providertype">Type</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="providername">Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="fromemail">From Email</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="priority">Priority</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="isactive">Active</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="EmailProviderDto" SortLabel="lasttestedat">Last Test</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">
@@ -119,6 +119,8 @@
             PageNumber = state.Page + 1,
             PageSize = state.PageSize,
             SearchTerm = _search,
+            SortColumn = state.SortLabel,
+            SortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc",
         });
 
         return new TableData<EmailProviderDto>

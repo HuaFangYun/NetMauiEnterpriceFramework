@@ -52,6 +52,9 @@ public class RoleQueryService : IRoleQueryService
         {
             "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
             "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
+            "canadded" => desc ? query.OrderByDescending(x => x.CanAddEdit) : query.OrderBy(x => x.CanAddEdit),
+            "candelete" => desc ? query.OrderByDescending(x => x.CanDelete) : query.OrderBy(x => x.CanDelete),
+            "canreadonly" => desc ? query.OrderByDescending(x => x.CanReadOnly) : query.OrderBy(x => x.CanReadOnly),
             "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),
             _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
         };

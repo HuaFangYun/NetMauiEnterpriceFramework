@@ -48,13 +48,13 @@
         </ToolBarContent>
         <HeaderContent>
             <MudTh Style="text-align:center;">Actions</MudTh>
-            <MudTh>User ID</MudTh>
-            <MudTh>Full Name</MudTh>
-            <MudTh>Group</MudTh>
-            <MudTh>Add/Edit</MudTh>
-            <MudTh>Delete</MudTh>
-            <MudTh>Read Only</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="userid">User ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="fullname">Full Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="groupname">Group</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="canadded">Add/Edit</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="candelete">Delete</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="canreadonly">Read Only</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="RoleListItemDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">

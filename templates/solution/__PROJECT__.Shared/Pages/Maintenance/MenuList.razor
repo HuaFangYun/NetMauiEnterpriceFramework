@@ -48,13 +48,13 @@
         </ToolBarContent>
         <HeaderContent>
             <MudTh Style="text-align:center;">Actions</MudTh>
-            <MudTh>ID</MudTh>
-            <MudTh>Unique</MudTh>
-            <MudTh>Name</MudTh>
-            <MudTh>Level</MudTh>
-            <MudTh>Parent</MudTh>
-            <MudTh>Order</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="id">ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="menuunique">Unique</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="menuname">Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="parentlevelid">Level</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="menuparent">Parent</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="orderseq">Order</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="MenuListItemDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">

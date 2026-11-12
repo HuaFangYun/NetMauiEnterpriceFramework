@@ -14,14 +14,22 @@
 @inject ApiService ApiService
 @inject IHttpMessageHandlerFactory HttpMessageHandlerFactory
 @inject ILogger<AuthenticatedLayout> Logger
+@inject IJSRuntime JS
+@inject IBrowserViewportService ViewportService
 
 <MudThemeProvider Theme="_theme" @bind-IsDarkMode="_isDarkMode" />
 
-<MudLayout Class="@(_isDarkMode ? "app-dark" : "app-light")" @onclick="CloseSearch">
-    <MudAppBar Elevation="1" Style="background:#ffffff;color:#004481;">
-        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" />
-        <MudText Typo="Typo.h6" Class="ml-2" Style="font-weight:800;">@BrandName</MudText>
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Class="ml-2" OnClick="@(_ => ToggleDrawer())" />
+<MudLayout Class="@ShellClass" @onclick="CloseSearch">
+    <MudAppBar Elevation="1" Class="app-topbar">
+        <div class="app-brand" title="@BrandName">
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Color="Color.Primary" Class="app-brand-icon" />
+            <MudText Typo="Typo.h6" Class="app-brand-text">@BrandName</MudText>
+        </div>
+        <MudIconButton Icon="@(DrawerToggleState ? Icons.Material.Filled.MenuOpen : Icons.Material.Filled.Menu)"
+                       Color="Color.Inherit"
+                       Class="app-drawer-toggle ml-2"
+                       aria-label="@(DrawerToggleState ? "Collapse navigation" : "Expand navigation")"
+                       OnClick="@(_ => ToggleDrawer())" />
         <MudSpacer />
         <div class="search-wrapper" @onclick:stopPropagation="true">
             <div class="search-box">
@@ -129,7 +137,13 @@
         </div>
         <MudIconButton Icon="@(_isDarkMode ? Icons.Material.Filled.LightMode : Icons.Material.Filled.DarkMode)"
                        Color="Color.Inherit"
+                       aria-label="@(_isDarkMode ? "Switch to light mode" : "Switch to dark mode")"
                        OnClick="@(_ => ToggleDarkMode())" />
+        <MudIconButton Icon="@Icons.Material.Filled.Brush"
+                       Color="Color.Inherit"
+                       aria-label="@(_neoBrutalism ? "Use classic style" : "Try neo brutalism")"
+                       title="@(_neoBrutalism ? "Classic style" : "Neo brutalism")"
+                       OnClick="@(_ => ToggleNeoBrutalismAsync())" />
         <MudMenu>
             <ActivatorContent Context="accountMenu">
                 <MudIconButton Icon="@Icons.Material.Filled.AccountCircle"
@@ -144,29 +158,62 @@
         </MudMenu>
     </MudAppBar>
 
-    <MudDrawer @bind-Open="_drawerOpen" Width="240px" Elevation="1" Variant="DrawerVariant.Responsive" ClipMode="DrawerClipMode.Always">
-        <MudNavMenu Class="pa-3">
-            <div class="sidebar-brand">
-                <div class="sidebar-brand-icon">
+    <MudDrawer Open="@DrawerIsOpen"
+               Width="@DrawerWidth"
+               Elevation="1"
+               Variant="@CurrentDrawerVariant"
+               ClipMode="@CurrentDrawerClipMode"
+               Overlay="@_isMobile"
+               OverlayAutoClose="true"
+               OpenChanged="OnDrawerOpenChanged">
+        <MudNavMenu Class="@(ShowExpandedNavigation ? "pa-3 sidebar-expanded" : "pa-2 sidebar-collapsed")">
+            @if (ShowExpandedNavigation)
+            {
+                <div class="sidebar-brand">
+                    <div class="sidebar-brand-icon">
+                        <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
+                    </div>
+                    <div class="sidebar-brand-copy">
+                        <div class="sidebar-brand-title">@BrandName</div>
+                        <div class="sidebar-brand-subtitle">Enterprise Portal</div>
+                    </div>
+                </div>
+
+                <MudDivider Class="my-3" />
+
+                @foreach (var item in _menuItems)
+                {
+                    <RecursiveMenuItem Item="item"
+                                       OnOpen="OpenMenu"
+                                       Expanded="@(_expandedParentUnique == item.MenuUnique)" />
+                }
+            }
+            else
+            {
+                <div class="sidebar-rail-brand">
                     <MudIcon Icon="@Icons.Material.Filled.AccountBalance" />
                 </div>
-                <div class="sidebar-brand-copy">
-                    <div class="sidebar-brand-title">@BrandName</div>
-                    <div class="sidebar-brand-subtitle">Enterprise Portal</div>
+                <MudDivider Class="my-2" />
+                <div class="sidebar-rail">
+                    @for (var index = 0; index < _menuItems.Count; index++)
+                    {
+                        var item = _menuItems[index];
+                        <button type="button"
+                                class="sidebar-rail-item"
+                                style="animation-delay:@(index * 25)ms"
+                                title="@item.MenuName"
+                                aria-label="@item.MenuName"
+                                @onclick="@(() => ExpandFromRail(item))">
+                            <MudIcon Icon="@MenuIconResolver.GetIcon(item.MenuIcon)" />
+                        </button>
+                    }
                 </div>
-            </div>
-
-            <MudDivider Class="my-3" />
-
-            @foreach (var item in _menuItems)
-            {
-                <RecursiveMenuItem Item="item" OnOpen="OpenMenu" />
             }
         </MudNavMenu>
     </MudDrawer>
 
     <MudMainContent>
-        <MudContainer MaxWidth="MaxWidth.False" Class="pa-6">
+        <MudContainer MaxWidth="MaxWidth.False" Class="app-main-container">
             @if (TabService.Tabs.Count > 0)
             {
                 <MudTabs @bind-ActivePanelIndex="_selectedTabIndex" Elevation="0" Rounded="true" KeepPanelsAlive="true" Class="enterprise-tabs">
@@ -219,7 +266,21 @@
     private const string ProfileComponent = "__PROJECT__.Shared.Pages.Profile, __PROJECT__.Shared";
     private const string NotificationsComponent = "__PROJECT__.Shared.Pages.Notifications, __PROJECT__.Shared";
 
-    private bool _drawerOpen = true;
+    private const string StyleStorageKey = "enterprise-ui-style";
+    private readonly Guid _viewportObserverId = Guid.NewGuid();
+    private bool _drawerExpanded = true;
+    private bool _sidebarCompact;
+    private bool _neoBrutalism = true;
+    private bool _isMobile;
+    private bool _mobileMenuOpen;
+    private string? _expandedParentUnique;
+    private string ShellClass => $"{(_isDarkMode ? "app-dark" : "app-light")} {(_drawerExpanded ? "app-shell-expanded" : "app-shell-collapsed")} {(_neoBrutalism ? "neo-brutalism" : string.Empty)}";
+    private bool DrawerToggleState => _isMobile ? _mobileMenuOpen : _drawerExpanded;
+    private bool DrawerIsOpen => _isMobile ? _mobileMenuOpen : true;
+    private string DrawerWidth => _isMobile || _drawerExpanded ? "240px" : "72px";
+    private bool ShowExpandedNavigation => _isMobile || _drawerExpanded;
+    private DrawerVariant CurrentDrawerVariant => _isMobile ? DrawerVariant.Temporary : DrawerVariant.Persistent;
+    private DrawerClipMode CurrentDrawerClipMode => _isMobile ? DrawerClipMode.Never : DrawerClipMode.Always;
     private bool _notificationPopoverOpen;
     private bool _isDarkMode;
     private int _unreadCount = 0;
@@ -241,6 +302,12 @@
             Background = "#f9f9ff",
             Surface = "#ffffff",
             AppbarBackground = "#ffffff",
+            AppbarText = "#004481",
+            DrawerBackground = "#ffffff",
+            DrawerText = "#263143",
+            TextPrimary = "#111c2d",
+            TextSecondary = "#5b6472",
+            ActionDefault = "#5b6472",
         },
         PaletteDark = new PaletteDark
         {
@@ -248,7 +315,14 @@
             Secondary = "#ffb3ac",
             Background = "#111c2d",
             Surface = "#1b2638",
-            AppbarBackground = "#1b2638",
+            AppbarBackground = "#162235",
+            AppbarText = "#e8eef9",
+            DrawerBackground = "#162235",
+            DrawerText = "#dbe6f5",
+            TextPrimary = "#e8eef9",
+            TextSecondary = "#b8c4d9",
+            ActionDefault = "#b8c4d9",
+            Divider = "rgba(255, 255, 255, .12)",
         },
         Typography = new Typography
         {
@@ -412,9 +486,123 @@
     private Type? GetComponentType(AppTabDto tab)
         => ComponentResolver.ResolveComponentType(tab.ComponentType);
 
-    private void ToggleDrawer() => _drawerOpen = !_drawerOpen;
+    private void ToggleDrawer()
+    {
+        if (_isMobile)
+        {
+            _mobileMenuOpen = !_mobileMenuOpen;
+            if (_mobileMenuOpen)
+            {
+                _drawerExpanded = true;
+                _expandedParentUnique = null;
+            }
+
+            return;
+        }
+
+        if (_sidebarCompact)
+        {
+            _sidebarCompact = false;
+            _drawerExpanded = true;
+            return;
+        }
+
+        _sidebarCompact = true;
+        _drawerExpanded = false;
+        _expandedParentUnique = null;
+    }
+
+    private void OnDrawerOpenChanged(bool open)
+    {
+        if (!_isMobile)
+        {
+            return;
+        }
+
+        _mobileMenuOpen = open;
+        if (!open)
+        {
+            _expandedParentUnique = null;
+        }
+    }
+
+    private void OnViewportChanged(BrowserViewportEventArgs args)
+    {
+        var mobile = args.Breakpoint is Breakpoint.Xs or Breakpoint.Sm or Breakpoint.Md;
+
+        _ = InvokeAsync(() =>
+        {
+            if (_isMobile == mobile)
+            {
+                return;
+            }
+
+            _isMobile = mobile;
+            if (mobile)
+            {
+                _mobileMenuOpen = false;
+                _drawerExpanded = true;
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    private void ExpandFromRail(MenuItemDto item)
+    {
+        _drawerExpanded = true;
+        _expandedParentUnique = item.MenuUnique;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            var savedStyle = await JS.InvokeAsync<string?>("localStorage.getItem", StyleStorageKey);
+            if (string.Equals(savedStyle, "classic", StringComparison.OrdinalIgnoreCase))
+            {
+                _neoBrutalism = false;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Storage can be unavailable during prerender; keep the default style.
+        }
+
+        try
+        {
+            await ViewportService.SubscribeAsync(_viewportObserverId, OnViewportChanged, null, true);
+        }
+        catch
+        {
+            // Keep desktop behavior when the viewport listener is unavailable.
+        }
+    }
 
     private void ToggleDarkMode() => _isDarkMode = !_isDarkMode;
+
+    private async Task ToggleNeoBrutalismAsync()
+    {
+        _neoBrutalism = !_neoBrutalism;
+
+        try
+        {
+            await JS.InvokeVoidAsync(
+                "localStorage.setItem",
+                StyleStorageKey,
+                _neoBrutalism ? "neo" : "classic");
+        }
+        catch
+        {
+            // The visual toggle still works when storage is unavailable.
+        }
+    }
 
     private void OpenMenu(MenuItemDto item)
     {
@@ -457,6 +645,17 @@
             item.MenuUrl,
             parameters.Count > 0 ? parameters : null,
             item.MenuIcon);
+
+        if (_isMobile)
+        {
+            _mobileMenuOpen = false;
+            _expandedParentUnique = null;
+        }
+        else if (_sidebarCompact)
+        {
+            _drawerExpanded = false;
+            _expandedParentUnique = null;
+        }
     }
 
     private void OpenProfile()
@@ -536,6 +735,7 @@
 
     public void Dispose()
     {
+        _ = ViewportService.UnsubscribeAsync(_viewportObserverId);
         TabService.OnTabsChanged -= OnTabsChanged;
         if (_hub != null)
         {

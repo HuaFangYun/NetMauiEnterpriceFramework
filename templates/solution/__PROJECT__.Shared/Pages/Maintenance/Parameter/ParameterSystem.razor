@@ -110,7 +110,7 @@
                 <MudTh Style="text-align:center;">Actions</MudTh>
                 @foreach (var field in _makerFields)
                 {
-                    <MudTh>@(field.FieldDesc ?? field.FieldName)</MudTh>
+                    <MudTh><MudTableSortLabel T="Dictionary<string, string>" SortLabel="@field.FieldName">@(field.FieldDesc ?? field.FieldName)</MudTableSortLabel></MudTh>
                 }
             </HeaderContent>
             <RowTemplate>
@@ -155,11 +155,11 @@
                               Class="approval-search" />
             </ToolBarContent>
             <HeaderContent>
-                <MudTh>ID Pending</MudTh>
-                <MudTh>TypeParameter</MudTh>
+                <MudTh><MudTableSortLabel T="ParameterApprovalRowDto" SortLabel="idpending">ID Pending</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel T="ParameterApprovalRowDto" SortLabel="typeparameter">TypeParameter</MudTableSortLabel></MudTh>
                 @foreach (var field in _approvalFields)
                 {
-                    <MudTh>@(field.FieldDesc?.Replace("_", " ") ?? field.FieldName)</MudTh>
+                    <MudTh><MudTableSortLabel T="ParameterApprovalRowDto" SortLabel="@field.FieldName">@(field.FieldDesc?.Replace("_", " ") ?? field.FieldName)</MudTableSortLabel></MudTh>
                 }
                 <MudTh Style="text-align:center;">Action</MudTh>
             </HeaderContent>

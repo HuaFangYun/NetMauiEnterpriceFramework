@@ -177,7 +177,7 @@
                 }
                 @foreach (var column in Columns)
                 {
-                    <MudTh>@column</MudTh>
+                    <MudTh><MudTableSortLabel T="Dictionary<string, object>" SortLabel="@column">@column</MudTableSortLabel></MudTh>
                 }
             </HeaderContent>
             <RowTemplate>
@@ -296,12 +296,18 @@
             return new TableData<Dictionary<string, object>>();
         }
 
+        if (!string.IsNullOrWhiteSpace(state.SortLabel))
+        {
+            _sortColumn = state.SortLabel;
+            _sortDirection = state.SortDirection == SortDirection.Descending ? "desc" : "asc";
+        }
+
         var response = await DynamicApi.LoadScreenAsync(ScreenId, new DynamicLoadRequestDto
         {
             PageNumber = state.Page + 1,
             PageSize = state.PageSize,
             SearchTerm = _search,
-            SortColumn = string.IsNullOrWhiteSpace(_sortColumn) ? state.SortLabel : _sortColumn,
+            SortColumn = _sortColumn,
             SortDirection = _sortDirection,
             Filters = new Dictionary<string, string?>(_filters, StringComparer.OrdinalIgnoreCase),
         });

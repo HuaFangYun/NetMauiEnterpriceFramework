@@ -36,9 +36,9 @@
               Bordered="true"
               Class="mt-4">
         <HeaderContent>
-            <MudTh>Notification</MudTh>
-            <MudTh>Date</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh><MudTableSortLabel T="NotificationDto" SortLabel="shorttext" SortBy="new Func<NotificationDto, object>(x => x.ShortText ?? string.Empty)">Notification</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="NotificationDto" SortLabel="createddate" SortBy="new Func<NotificationDto, object>(x => x.CreatedDate ?? DateTime.MinValue)">Date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="NotificationDto" SortLabel="isseen" SortBy="new Func<NotificationDto, object>(x => x.IsSeen)">Status</MudTableSortLabel></MudTh>
             <MudTh>Action</MudTh>
         </HeaderContent>
         <RowTemplate>

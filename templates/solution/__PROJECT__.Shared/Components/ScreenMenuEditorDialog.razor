@@ -17,15 +17,15 @@
                     </MudItem>
                     <MudItem xs="12">
                         <div class="d-flex flex-wrap gap-3">
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonLoad" Label="Load" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonProcess" Label="Process" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonGenerateTxt" Label="Generate TXT" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonExportExcel" Label="Export Excel" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonAdd" Label="Add" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonDelete" Label="Delete" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasActionRow" Label="Action Row" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.HasButtonImportExcel" Label="Import Excel" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonLoad" Label="Load" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonProcess" Label="Process" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonGenerateTxt" Label="Generate TXT" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonExportExcel" Label="Export Excel" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonAdd" Label="Add" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonDelete" Label="Delete" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasActionRow" Label="Action Row" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.HasButtonImportExcel" Label="Import Excel" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_model.IsActive" Label="Active" Color="Color.Primary" />
                         </div>
                     </MudItem>
                     <MudItem xs="12">
@@ -99,7 +99,7 @@
                             <MudTextField @bind-Value="_child.ModalSaveProcessQueryParam" Label="modal_save_process_query_param" Variant="Variant.Outlined" Lines="3" />
                         </MudItem>
                         <MudItem xs="12">
-                            <MudCheckBox T="bool" @bind-Value="_child.IsActive" Label="Active" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_child.IsActive" Label="Active" Color="Color.Primary" />
                         </MudItem>
                     </MudGrid>
                 }
@@ -125,8 +125,8 @@
                             <MudTextField @bind-Value="_import.FieldInput" Label="Field Input" Variant="Variant.Outlined" />
                         </MudItem>
                         <MudItem xs="12" Class="d-flex gap-3">
-                            <MudCheckBox T="bool" @bind-Value="_import.WithApproval" Label="With Approval" Color="Color.Primary" />
-                            <MudCheckBox T="bool" @bind-Value="_import.IsActive" Label="Active" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_import.WithApproval" Label="With Approval" Color="Color.Primary" />
+                            <MudSwitch T="bool" @bind-Value="_import.IsActive" Label="Active" Color="Color.Primary" />
                         </MudItem>
                     </MudGrid>
                 }

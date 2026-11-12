@@ -72,9 +72,20 @@ else
     [Parameter]
     public bool AsTile { get; set; }
 
+    [Parameter]
+    public bool Expanded { get; set; }
+
     private bool _expanded;
 
     private string? LongLabelClass => Item.MenuName.Length > 14 ? "sidebar-label-long" : null;
+
+    protected override void OnParametersSet()
+    {
+        if (Expanded)
+        {
+            _expanded = true;
+        }
+    }
 
     private void Toggle() => _expanded = !_expanded;
 }

@@ -43,6 +43,7 @@ public class GroupQueryService : IGroupQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "groupid" => desc ? query.OrderByDescending(x => x.GroupId) : query.OrderBy(x => x.GroupId),
             "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
             "usercount" => desc ? query.OrderByDescending(x => x.UserCount) : query.OrderBy(x => x.UserCount),
             "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),

@@ -57,8 +57,11 @@ public class UserQueryService : IUserQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "userid" => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
             "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
+            "gendername" => desc ? query.OrderByDescending(x => x.GenderName) : query.OrderBy(x => x.GenderName),
             "email" => desc ? query.OrderByDescending(x => x.Email) : query.OrderBy(x => x.Email),
+            "phonenumber" => desc ? query.OrderByDescending(x => x.PhoneNumber) : query.OrderBy(x => x.PhoneNumber),
             "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
             "isactive" => desc ? query.OrderByDescending(x => x.IsActive) : query.OrderBy(x => x.IsActive),
             _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
@@ -117,7 +120,11 @@ public class UserQueryService : IUserQueryService
             "islogin" => desc ? query.OrderByDescending(x => x.IsLogin) : query.OrderBy(x => x.IsLogin),
             "isfirstlogin" => desc ? query.OrderByDescending(x => x.IsFirstLogin) : query.OrderBy(x => x.IsFirstLogin),
             "islocked" => desc ? query.OrderByDescending(x => x.IsLocked) : query.OrderBy(x => x.IsLocked),
+            "failedpasswordattempt" => desc ? query.OrderByDescending(x => x.FailedPasswordAttempt) : query.OrderBy(x => x.FailedPasswordAttempt),
+            "ipaddress" => desc ? query.OrderByDescending(x => x.IpAddress) : query.OrderBy(x => x.IpAddress),
             "lastlogindate" => desc ? query.OrderByDescending(x => x.LastLoginDate) : query.OrderBy(x => x.LastLoginDate),
+            "comment" => desc ? query.OrderByDescending(x => x.Comment) : query.OrderBy(x => x.Comment),
+            "userid" => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
             _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
         };
 

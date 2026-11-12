@@ -9,10 +9,11 @@
 @inject INotifyAuthenticationState AuthStateNotifier
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IJSRuntime JS
 
 <MudThemeProvider Theme="LoginTheme" />
 
-<MudGrid Justify="Justify.Center" Class="login-page" Style="min-height:100vh; background:#e7eeff;">
+<MudGrid Justify="Justify.Center" Class="@LoginPageClass" Style="min-height:100vh; background:#e7eeff;">
     <MudItem xs="12" md="6" Class="login-brand-item">
         <MudPaper Elevation="0" Class="login-brand-panel">
             <div class="login-brand-top">
@@ -242,6 +243,9 @@
 
 @code {
     private const string BrandName = "__PROJECT__";
+    private const string StyleStorageKey = "enterprise-ui-style";
+    private bool _neoBrutalism = true;
+    private string LoginPageClass => $"login-page {(_neoBrutalism ? "neo-brutalism" : "classic-login")}";
 
     [SupplyParameterFromQuery(Name = "token")]
     public string? Token { get; set; }
@@ -320,6 +324,28 @@
         if (_resetTokenInvalid)
         {
             Snackbar.Add("Reset token is invalid or has expired.", Severity.Error);
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+        {
+            return;
+        }
+
+        try
+        {
+            var savedStyle = await JS.InvokeAsync<string?>("localStorage.getItem", StyleStorageKey);
+            if (string.Equals(savedStyle, "classic", StringComparison.OrdinalIgnoreCase))
+            {
+                _neoBrutalism = false;
+                StateHasChanged();
+            }
+        }
+        catch
+        {
+            // Storage can be unavailable during prerender; keep the default style.
         }
     }
 

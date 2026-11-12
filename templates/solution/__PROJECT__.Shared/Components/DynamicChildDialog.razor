@@ -14,11 +14,11 @@
                 if (field.Type is "cb" or "bit")
                 {
                     <MudItem xs="12">
-                        <MudCheckBox T="bool"
-                                     Value="@IsTrue(value)"
-                                     ValueChanged="@(v => _values[field.Id] = v ? "1" : "0")"
-                                     Label="@field.Label"
-                                     Color="Color.Primary" />
+                        <MudSwitch T="bool"
+                                   Value="@IsTrue(value)"
+                                   ValueChanged="@(v => _values[field.Id] = v ? "1" : "0")"
+                                   Label="@field.Label"
+                                   Color="Color.Primary" />
                     </MudItem>
                 }
                 else

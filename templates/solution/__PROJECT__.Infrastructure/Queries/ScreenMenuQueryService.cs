@@ -42,7 +42,10 @@ public class ScreenMenuQueryService : IScreenMenuQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "id" => desc ? query.OrderByDescending(e => e.Id) : query.OrderBy(e => e.Id),
             "description" => desc ? query.OrderByDescending(e => e.Description) : query.OrderBy(e => e.Description),
+            "screenmenuchildid" => desc ? query.OrderByDescending(e => e.ScreenMenuChildId) : query.OrderBy(e => e.ScreenMenuChildId),
+            "screenmenuimportexcelprocessid" => desc ? query.OrderByDescending(e => e.ScreenMenuImportExcelProcessId) : query.OrderBy(e => e.ScreenMenuImportExcelProcessId),
             "modifieddate" => desc ? query.OrderByDescending(e => e.ModifiedDate) : query.OrderBy(e => e.ModifiedDate),
             _ => desc ? query.OrderByDescending(e => e.Id) : query.OrderBy(e => e.Id),
         };

@@ -52,8 +52,11 @@ public class ApprovalQueryService : IApprovalQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "userid" => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
             "fullname" => desc ? query.OrderByDescending(x => x.FullName) : query.OrderBy(x => x.FullName),
             "email" => desc ? query.OrderByDescending(x => x.Email) : query.OrderBy(x => x.Email),
+            "approvaltype" => desc ? query.OrderByDescending(x => x.ApprovalType) : query.OrderBy(x => x.ApprovalType),
+            "requesterfullname" => desc ? query.OrderByDescending(x => x.RequesterFullName) : query.OrderBy(x => x.RequesterFullName),
             "createddate" => desc ? query.OrderByDescending(x => x.CreatedDate) : query.OrderBy(x => x.CreatedDate),
             _ => desc ? query.OrderByDescending(x => x.UserId) : query.OrderBy(x => x.UserId),
         };
@@ -100,7 +103,10 @@ public class ApprovalQueryService : IApprovalQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         query = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "groupid" => desc ? query.OrderByDescending(x => x.GroupId) : query.OrderBy(x => x.GroupId),
             "groupname" => desc ? query.OrderByDescending(x => x.GroupName) : query.OrderBy(x => x.GroupName),
+            "approvaltype" => desc ? query.OrderByDescending(x => x.ApprovalType) : query.OrderBy(x => x.ApprovalType),
+            "requesterfullname" => desc ? query.OrderByDescending(x => x.RequesterFullName) : query.OrderBy(x => x.RequesterFullName),
             "createddate" => desc ? query.OrderByDescending(x => x.CreatedDate) : query.OrderBy(x => x.CreatedDate),
             _ => desc ? query.OrderByDescending(x => x.GroupId) : query.OrderBy(x => x.GroupId),
         };
@@ -176,8 +182,14 @@ public class ApprovalQueryService : IApprovalQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "userid" => desc ? list.OrderByDescending(x => x.UserId).ToList() : list.OrderBy(x => x.UserId).ToList(),
             "fullname" => desc ? list.OrderByDescending(x => x.FullName).ToList() : list.OrderBy(x => x.FullName).ToList(),
             "groupname" => desc ? list.OrderByDescending(x => x.GroupName).ToList() : list.OrderBy(x => x.GroupName).ToList(),
+            "canadded" => desc ? list.OrderByDescending(x => x.CanAddEdit).ToList() : list.OrderBy(x => x.CanAddEdit).ToList(),
+            "candelete" => desc ? list.OrderByDescending(x => x.CanDelete).ToList() : list.OrderBy(x => x.CanDelete).ToList(),
+            "canreadonly" => desc ? list.OrderByDescending(x => x.CanReadOnly).ToList() : list.OrderBy(x => x.CanReadOnly).ToList(),
+            "approvaltype" => desc ? list.OrderByDescending(x => x.ApprovalType).ToList() : list.OrderBy(x => x.ApprovalType).ToList(),
+            "requesterfullname" => desc ? list.OrderByDescending(x => x.RequesterFullName).ToList() : list.OrderBy(x => x.RequesterFullName).ToList(),
             "createddate" => desc ? list.OrderByDescending(x => x.CreatedDate).ToList() : list.OrderBy(x => x.CreatedDate).ToList(),
             _ => desc ? list.OrderByDescending(x => x.UserId).ToList() : list.OrderBy(x => x.UserId).ToList(),
         };
@@ -243,7 +255,12 @@ public class ApprovalQueryService : IApprovalQueryService
         var desc = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "menuunique" => desc ? list.OrderByDescending(x => x.MenuUnique).ToList() : list.OrderBy(x => x.MenuUnique).ToList(),
             "menuname" => desc ? list.OrderByDescending(x => x.MenuName).ToList() : list.OrderBy(x => x.MenuName).ToList(),
+            "menuurl" => desc ? list.OrderByDescending(x => x.MenuUrl).ToList() : list.OrderBy(x => x.MenuUrl).ToList(),
+            "menuuniqueparent" => desc ? list.OrderByDescending(x => x.MenuUniqueParent).ToList() : list.OrderBy(x => x.MenuUniqueParent).ToList(),
+            "approvaltype" => desc ? list.OrderByDescending(x => x.ApprovalType).ToList() : list.OrderBy(x => x.ApprovalType).ToList(),
+            "requesterfullname" => desc ? list.OrderByDescending(x => x.RequesterFullName).ToList() : list.OrderBy(x => x.RequesterFullName).ToList(),
             "createddate" => desc ? list.OrderByDescending(x => x.CreatedDate).ToList() : list.OrderBy(x => x.CreatedDate).ToList(),
             _ => desc ? list.OrderByDescending(x => x.MenuUnique).ToList() : list.OrderBy(x => x.MenuUnique).ToList(),
         };

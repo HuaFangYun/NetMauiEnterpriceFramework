@@ -190,10 +190,15 @@ public class ParameterEngineService : IParameterEngineService
         }
 
         var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
-        list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
+        var sortColumn = request.SortColumn ?? string.Empty;
+        list = sortColumn.ToLowerInvariant() switch
         {
             "typeparameter" => descending ? list.OrderByDescending(e => e.TypeParameter).ToList() : list.OrderBy(e => e.TypeParameter).ToList(),
-            _ => descending ? list.OrderByDescending(e => e.IdPending).ToList() : list.OrderBy(e => e.IdPending).ToList(),
+            "idpending" => descending ? list.OrderByDescending(e => e.IdPending).ToList() : list.OrderBy(e => e.IdPending).ToList(),
+            "" => descending ? list.OrderByDescending(e => e.IdPending).ToList() : list.OrderBy(e => e.IdPending).ToList(),
+            _ => descending
+                ? list.OrderByDescending(e => e.Fields.GetValueOrDefault(sortColumn) ?? string.Empty).ToList()
+                : list.OrderBy(e => e.Fields.GetValueOrDefault(sortColumn) ?? string.Empty).ToList(),
         };
 
         return new GeneralListResponseDto<ParameterApprovalRowDto>
@@ -522,7 +527,10 @@ public class ParameterEngineService : IParameterEngineService
         var descending = string.Equals(request.SortDirection, "desc", StringComparison.OrdinalIgnoreCase);
         list = (request.SortColumn ?? string.Empty).ToLowerInvariant() switch
         {
+            "keyvalue" => descending ? list.OrderByDescending(e => e.KeyValue).ToList() : list.OrderBy(e => e.KeyValue).ToList(),
             "tablename" => descending ? list.OrderByDescending(e => e.TableName).ToList() : list.OrderBy(e => e.TableName).ToList(),
+            "summary" => descending ? list.OrderByDescending(e => e.Summary).ToList() : list.OrderBy(e => e.Summary).ToList(),
+            "requesterfullname" => descending ? list.OrderByDescending(e => e.RequesterFullName).ToList() : list.OrderBy(e => e.RequesterFullName).ToList(),
             "createddate" => descending ? list.OrderByDescending(e => e.CreatedDate).ToList() : list.OrderBy(e => e.CreatedDate).ToList(),
             _ => descending ? list.OrderByDescending(e => e.TableName).ToList() : list.OrderBy(e => e.TableName).ToList(),
         };

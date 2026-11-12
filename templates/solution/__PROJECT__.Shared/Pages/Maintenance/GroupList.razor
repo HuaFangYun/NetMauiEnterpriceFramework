@@ -47,10 +47,10 @@
         </ToolBarContent>
         <HeaderContent>
             <MudTh Style="text-align:center;">Actions</MudTh>
-            <MudTh>Group ID</MudTh>
-            <MudTh>Group Name</MudTh>
-            <MudTh>Users</MudTh>
-            <MudTh>Status</MudTh>
+            <MudTh><MudTableSortLabel T="GroupListItemDto" SortLabel="groupid">Group ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="GroupListItemDto" SortLabel="groupname">Group Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="GroupListItemDto" SortLabel="usercount">Users</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel T="GroupListItemDto" SortLabel="isactive">Status</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Actions" Style="text-align:center; white-space:nowrap;">
