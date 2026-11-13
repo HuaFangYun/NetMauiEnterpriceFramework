@@ -17,6 +17,8 @@ Generator framework enterprise **.NET 10** untuk menghasilkan aplikasi siap paka
 Nama paket npm: `create-enterprise-agentic-framework`  
 Repository: [rayzaisra/NetMauiEnterpriceFramework](https://github.com/rayzaisra/NetMauiEnterpriceFramework)
 
+Referensi arsitektur, aturan coding, database, dan guardrail untuk agent AI: **[FRAMEWORK-REFERENCE.md](FRAMEWORK-REFERENCE.md)**
+
 ## Prasyarat
 
 - Node.js 20+
